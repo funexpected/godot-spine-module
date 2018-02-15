@@ -42,16 +42,21 @@ class CollisionObject2D;
 class Spine : public Node2D {
 
 	GDCLASS(Spine, Node2D);
+
 public:
 	enum AnimationProcessMode {
+
 		ANIMATION_PROCESS_FIXED,
 		ANIMATION_PROCESS_IDLE,
+
 	};
 	enum DebugAttachmentMode {
+
 		DEBUG_ATTACHMENT_REGION,
 		DEBUG_ATTACHMENT_MESH,
 		DEBUG_ATTACHMENT_SKINNED_MESH,
 		DEBUG_ATTACHMENT_BOUNDING_BOX,
+		
 	};
 
 	class SpineResource : public Resource {
@@ -232,8 +237,6 @@ public:
 	virtual ~Spine();
 };
 
-VARIANT_ENUM_CAST(Spine::AnimationProcessMode);
-VARIANT_ENUM_CAST(Spine::DebugAttachmentMode);
 
 #endif // SPINE_H
 #endif // MODULE_SPINE_ENABLED

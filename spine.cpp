@@ -38,6 +38,9 @@
 #include <spine/spine.h>
 #include <core/method_bind_ext.gen.inc>
 
+VARIANT_ENUM_CAST(Spine::AnimationProcessMode);
+VARIANT_ENUM_CAST(Spine::DebugAttachmentMode);
+
 Spine::SpineResource::SpineResource() {
 
 	atlas = NULL;
@@ -1223,13 +1226,13 @@ void Spine::_bind_methods() {
 	ADD_SIGNAL(MethodInfo("animation_event", PropertyInfo(Variant::INT, "track"), PropertyInfo(Variant::DICTIONARY, "event")));
 	ADD_SIGNAL(MethodInfo("animation_end", PropertyInfo(Variant::INT, "track")));
 
-	BIND_CONSTANT(ANIMATION_PROCESS_FIXED);
-	BIND_CONSTANT(ANIMATION_PROCESS_IDLE);
+	BIND_ENUM_CONSTANT(ANIMATION_PROCESS_FIXED);
+	BIND_ENUM_CONSTANT(ANIMATION_PROCESS_IDLE);
 
-	BIND_CONSTANT(DEBUG_ATTACHMENT_REGION);
-	BIND_CONSTANT(DEBUG_ATTACHMENT_MESH);
-	BIND_CONSTANT(DEBUG_ATTACHMENT_SKINNED_MESH);
-	BIND_CONSTANT(DEBUG_ATTACHMENT_BOUNDING_BOX);
+	BIND_ENUM_CONSTANT(DEBUG_ATTACHMENT_REGION);
+	BIND_ENUM_CONSTANT(DEBUG_ATTACHMENT_MESH);
+	BIND_ENUM_CONSTANT(DEBUG_ATTACHMENT_SKINNED_MESH);
+	BIND_ENUM_CONSTANT(DEBUG_ATTACHMENT_BOUNDING_BOX);
 }
 
 Rect2 Spine::_edit_get_rect() const {
