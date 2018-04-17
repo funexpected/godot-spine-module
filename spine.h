@@ -113,7 +113,7 @@ private:
 
 	typedef struct AttachmentNode {
 		List<AttachmentNode>::Element *E;
-		spBone *bone;
+		spSlot *slot;
 		WeakRef *ref;
 		Vector2 ofs;
 		Vector2 scale;
@@ -231,7 +231,7 @@ public:
 
 	//void advance(float p_time);
 
-	virtual Rect2 _edit_get_rect() const;
+	//virtual Rect2 _edit_get_rect() const;
 
 	Spine();
 	virtual ~Spine();

@@ -372,6 +372,7 @@ void Spine::_animation_process(float p_delta) {
 			frames_to_skip = skip_frames;
 		}
 	}
+    current_pos += forward ? process_delta : -process_delta;
 	spAnimationState_update(state, forward ? process_delta : -process_delta);
 	spAnimationState_apply(state, skeleton);
 	spSkeleton_updateWorldTransform(skeleton);
@@ -391,10 +392,18 @@ void Spine::_animation_process(float p_delta) {
 				break;
 			continue;
 		}
-		spBone *bone = info.bone;
+        spSlot *slot = info.slot;
+		spBone *bone = slot->bone;
 		node->call("set_position", Vector2(bone->worldX + bone->skeleton->x, -bone->worldY + bone->skeleton->y) + info.ofs);
 		node->call("set_scale", Vector2(spBone_getWorldScaleX(bone), spBone_getWorldScaleY(bone)) * info.scale);
-		node->call("set_rotation", Math::atan2(bone->c, bone->d) + Math::deg2rad(info.rot));
+		//node->call("set_rotation", Math::atan2(bone->c, bone->d) + Math::deg2rad(info.rot));
+		node->call("set_rotation_degrees", spBone_getWorldRotationX(bone) + info.rot);
+        Color c;
+        c.a = slot->color.a;
+        c.r = slot->color.r;
+        c.g = slot->color.g;
+        c.b = slot->color.b;
+        node->call("set_modulate", c);
 	}
 	update();
 	process_delta = 0;
@@ -860,6 +869,23 @@ Dictionary Spine::get_skeleton() const {
 	dict["x"] = skeleton->x;
 	dict["y"] = skeleton->y;
 
+	Array bones;
+	for (int i=0; i<skeleton->bonesCount;i++){
+		spBone *b = skeleton->bones[i];
+		Dictionary bi;
+		bi["name"] = b->data->name;
+		bi["parent"] = b->parent == NULL? Variant("") : b->parent->data->name;
+		bones.append(bi);
+	}
+	dict["bones"] = bones;
+
+	Array slots;
+	for (int j=0; j<skeleton->slotsCount; j++){
+		spSlot *s = skeleton->slots[j];
+		slots.append(s->data->name);
+	}
+	dict["slots"] = slots;
+
 	return dict;
 }
 
@@ -977,8 +1003,8 @@ bool Spine::has_attachment_node(const String &p_bone_name, const Variant &p_node
 bool Spine::add_attachment_node(const String &p_bone_name, const Variant &p_node, const Vector2 &p_ofs, const Vector2 &p_scale, const real_t p_rot) {
 
 	ERR_FAIL_COND_V(skeleton == NULL, false);
-	spBone *bone = spSkeleton_findBone(skeleton, p_bone_name.utf8().get_data());
-	ERR_FAIL_COND_V(bone == NULL, false);
+	spSlot *slot = spSkeleton_findSlot(skeleton, p_bone_name.utf8().get_data());
+	ERR_FAIL_COND_V(slot == NULL, false);
 	Object *obj = p_node;
 	ERR_FAIL_COND_V(obj == NULL, false);
 	Node2D *node = Object::cast_to<Node2D>(obj);
@@ -987,9 +1013,9 @@ bool Spine::add_attachment_node(const String &p_bone_name, const Variant &p_node
 	if (obj->has_meta("spine_meta")) {
 
 		AttachmentNode *info = (AttachmentNode *)((uint64_t)obj->get_meta("spine_meta"));
-		if (info->bone != bone) {
+		if (info->slot !=  slot) {
 			// add to different bone, remove first
-			remove_attachment_node(info->bone->data->name, p_node);
+			remove_attachment_node(info->slot->data->name, p_node);
 		} else {
 			// add to same bone, update params
 			info->ofs = p_ofs;
@@ -1001,7 +1027,7 @@ bool Spine::add_attachment_node(const String &p_bone_name, const Variant &p_node
 	attachment_nodes.push_back(AttachmentNode());
 	AttachmentNode &info = attachment_nodes.back()->get();
 	info.E = attachment_nodes.back();
-	info.bone = bone;
+	info.slot = slot;
 	info.ref = memnew(WeakRef);
 	info.ref->set_obj(node);
 	info.ofs = p_ofs;
@@ -1015,8 +1041,8 @@ bool Spine::add_attachment_node(const String &p_bone_name, const Variant &p_node
 bool Spine::remove_attachment_node(const String &p_bone_name, const Variant &p_node) {
 
 	ERR_FAIL_COND_V(skeleton == NULL, false);
-	spBone *bone = spSkeleton_findBone(skeleton, p_bone_name.utf8().get_data());
-	ERR_FAIL_COND_V(bone == NULL, false);
+	spSlot *slot = spSkeleton_findSlot(skeleton, p_bone_name.utf8().get_data());
+	ERR_FAIL_COND_V(slot == NULL, false);
 	Object *obj = p_node;
 	ERR_FAIL_COND_V(obj == NULL, false);
 	Node2D *node = Object::cast_to<Node2D>(obj);
@@ -1026,7 +1052,7 @@ bool Spine::remove_attachment_node(const String &p_bone_name, const Variant &p_n
 		return false;
 
 	AttachmentNode *info = (AttachmentNode *)((uint64_t)obj->get_meta("spine_meta"));
-	ERR_FAIL_COND_V(info->bone != bone, false);
+	ERR_FAIL_COND_V(info->slot != slot, false);
 	obj->set_meta("spine_meta", Variant());
 	memdelete(info->ref);
 	attachment_nodes.erase(info->E);
@@ -1232,6 +1258,7 @@ void Spine::_bind_methods() {
 	BIND_ENUM_CONSTANT(DEBUG_ATTACHMENT_BOUNDING_BOX);
 }
 
+/*
 Rect2 Spine::_edit_get_rect() const {
 
 	if (skeleton == NULL)
@@ -1269,6 +1296,7 @@ Rect2 Spine::_edit_get_rect() const {
 	int h = maxY - minY;
 	return attached ? Rect2(minX, -minY - h, maxX - minX, h) : Node2D::_edit_get_rect();
 }
+*/
 
 void Spine::_update_verties_count() {
 
