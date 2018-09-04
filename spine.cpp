@@ -426,8 +426,23 @@ void Spine::_set_process(bool p_process, bool p_force) {
 bool Spine::_set(const StringName &p_name, const Variant &p_value) {
 
 	String name = p_name;
-
-	if (name == "playback/play") {
+	if (name.begins_with("path")){
+		if (skeleton == NULL) return true;
+		Vector<String> params = name.split("/");
+		if (params.size()!=3) return true;
+		spPathConstraint *pc = spSkeleton_findPathConstraint(skeleton, params[1].utf8().get_data());
+		ERR_FAIL_COND_V(pc==NULL, false);
+		if (params[2] == "position") {
+			pc->position = p_value;
+		} else if (params[2] == "tmix"){
+			pc->translateMix = p_value;
+		} else if (params[2] == "rmix"){
+			pc->rotateMix = p_value;
+		} else if (params[2] == "spacing"){
+			pc->spacing = p_value;
+		}
+		spSkeleton_updateWorldTransform(skeleton);
+	} if (name == "playback/play") {
 
 		String which = p_value;
 		if (skeleton != NULL) {
@@ -671,13 +686,14 @@ void Spine::mix(const String &p_from, const String &p_to, real_t p_duration) {
 	spAnimationStateData_setMixByName(state->data, p_from.utf8().get_data(), p_to.utf8().get_data(), p_duration);
 }
 
-bool Spine::play(const String &p_name, real_t p_cunstom_scale, bool p_loop, int p_track, int p_delay) {
+bool Spine::play(const String &p_name, real_t p_cunstom_scale, bool p_loop, int p_track, float p_delay) {
 
 	ERR_FAIL_COND_V(skeleton == NULL, false);
 	spAnimation *animation = spSkeletonData_findAnimation(skeleton->data, p_name.utf8().get_data());
 	ERR_FAIL_COND_V(animation == NULL, false);
 	spTrackEntry *entry = spAnimationState_setAnimation(state, p_track, animation, p_loop);
 	entry->delay = p_delay;
+	entry->timeScale = p_cunstom_scale;
 	current_animation = p_name;
 	if (skip_frames) {
 		frames_to_skip = 0;
@@ -686,7 +702,7 @@ bool Spine::play(const String &p_name, real_t p_cunstom_scale, bool p_loop, int 
 	_set_process(true);
 	playing = true;
 	// update frame
-	if (!is_active())
+	//if (!is_active())
 		_animation_process(0);
 
 	return true;
@@ -772,14 +788,19 @@ void Spine::reset() {
 	spSkeleton_updateWorldTransform(skeleton);
 }
 
-void Spine::seek(float p_pos) {
-
-	_animation_process(p_pos - current_pos);
+void Spine::seek(int track, float p_pos) {
+	if (state == NULL) return;
+	spTrackEntry *entry = spAnimationState_getCurrent(state, track);
+	if (entry == NULL) return;
+	entry->trackTime = p_pos;
+	//_animation_process(p_pos - current_pos);
 }
 
-float Spine::tell() const {
-
-	return current_pos;
+float Spine::tell(int track) const {
+	if (state == NULL) return 0;
+	spTrackEntry *entry = spAnimationState_getCurrent(state, track);
+	if (entry == NULL) return 0;
+	return entry->trackTime;
 }
 
 void Spine::set_active(bool p_active) {
@@ -874,7 +895,8 @@ Dictionary Spine::get_skeleton() const {
 		spBone *b = skeleton->bones[i];
 		Dictionary bi;
 		bi["name"] = b->data->name;
-		bi["parent"] = b->parent == NULL? Variant("") : b->parent->data->name;
+		//Variant name = Variant(String(b->parent->data->name));
+		bi["parent"] = b->parent == NULL? Variant("") : Variant(b->parent->data->name);
 		bones.append(bi);
 	}
 	dict["bones"] = bones;
@@ -1071,7 +1093,7 @@ Ref<Shape2D> Spine::get_bounding_box(const String &p_slot_name, const String &p_
 	Vector<Vector2> points;
 	points.resize(info->verticesCount / 2);
 	for (int idx = 0; idx < info->verticesCount / 2; idx++)
-		points[idx] = Vector2(info->vertices[idx * 2], -info->vertices[idx * 2 + 1]);
+		points.write[idx] = Vector2(info->vertices[idx * 2], -info->vertices[idx * 2 + 1]);
 
 	ConvexPolygonShape2D *shape = memnew(ConvexPolygonShape2D);
 	shape->set_points(points);
@@ -1195,8 +1217,8 @@ void Spine::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("get_current_animation"), &Spine::get_current_animation);
 	ClassDB::bind_method(D_METHOD("stop_all"), &Spine::stop_all);
 	ClassDB::bind_method(D_METHOD("reset"), &Spine::reset);
-	ClassDB::bind_method(D_METHOD("seek", "pos"), &Spine::seek);
-	ClassDB::bind_method(D_METHOD("tell"), &Spine::tell);
+	ClassDB::bind_method(D_METHOD("seek", "track", "pos"), &Spine::seek);
+	ClassDB::bind_method(D_METHOD("tell", "track"), &Spine::tell);
 	ClassDB::bind_method(D_METHOD("set_active", "active"), &Spine::set_active);
 	ClassDB::bind_method(D_METHOD("is_active"), &Spine::is_active);
 	ClassDB::bind_method(D_METHOD("get_animation_length", "animation"), &Spine::get_animation_length);

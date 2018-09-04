@@ -154,7 +154,7 @@ public:
 	bool has_animation(const String& p_name);
 	void mix(const String& p_from, const String& p_to, real_t p_duration);
 
-	bool play(const String& p_name, real_t p_cunstom_scale = 1.0f, bool p_loop = false, int p_track = 0, int p_delay = 0);
+	bool play(const String& p_name, real_t p_cunstom_scale = 1.0f, bool p_loop = false, int p_track = 0, float p_delay = 0);
 	bool add(const String& p_name, real_t p_cunstom_scale = 1.0f, bool p_loop = false, int p_track = 0, int p_delay = 0);
 	void clear(int p_track = -1);
 	void stop();
@@ -167,8 +167,8 @@ public:
 	String get_current_animation(int p_track = 0) const;
 	void stop_all();
 	void reset();
-	void seek(float p_pos);
-	float tell() const;
+	void seek(int track, float p_pos);
+	float tell(int track) const;
 
 	void set_active(bool p_active);
 	bool is_active() const;
