@@ -57,7 +57,7 @@ class SpineBatcher {
 		SetBlendMode(int p_mode);
 		void draw(RID ci);
 	};
-
+public:
 	struct Elements : Command {
 		Ref<Texture> texture;
 		int vertices_count;
@@ -66,6 +66,7 @@ class SpineBatcher {
 		Color *colors;
 		Vector2 *uvs;
 		int* indies;
+		int pool_idx;
 
 		Elements();
 		~Elements();

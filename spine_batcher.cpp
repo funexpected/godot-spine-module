@@ -32,6 +32,63 @@
 
 #define BATCH_CAPACITY 1024
 
+Vector< SpineBatcher::Elements* > *spine_elements_pool;
+int spine_elements_pool_last = 0;
+
+SpineBatcher::Elements* spine_get_element(){
+	//return memnew(SpineBatcher::Elements);
+	if (spine_elements_pool==NULL){
+		spine_elements_pool = memnew(Vector< SpineBatcher::Elements* >);
+	}
+	if (spine_elements_pool_last==0){
+		for (int i=0; i<spine_elements_pool->size(); i++){
+			spine_elements_pool->get(i)->pool_idx += 1024;
+		}
+		for (int i=0; i<1024; i++){
+			SpineBatcher::Elements *elem = memnew(SpineBatcher::Elements);
+			elem->pool_idx = 1023-i;
+			spine_elements_pool->insert(0, elem);
+		}
+		spine_elements_pool_last = 1024;
+	}
+	spine_elements_pool_last--;
+	return spine_elements_pool->get(spine_elements_pool_last);
+	//SpineBatcher::Elements *elem = spine_elements_pool->get(spine_elements_pool_last);
+	//elem->pool_idx = spine_elements_pool_last;
+	//return elem;
+}
+
+void spine_resume_element(SpineBatcher::Elements *elem){
+	//return memdelete(elem);
+	if (!spine_elements_pool->size()) return;
+	int nidx = spine_elements_pool_last;
+	spine_elements_pool_last = nidx+1;
+	if (spine_elements_pool_last == spine_elements_pool->size()){
+		for (int i=0; i<spine_elements_pool->size(); i++){
+			memdelete(spine_elements_pool->get(i));
+		}
+		spine_elements_pool->resize(0);
+		return;
+	}
+	elem->texture = Ref<Texture>();
+	elem->vertices_count = 0;
+	elem->indies_count = 0;
+
+	if (elem->pool_idx == nidx){
+		spine_elements_pool->get(0)->pool_idx = nidx;
+		elem->pool_idx = 0;
+		spine_elements_pool->set(nidx, spine_elements_pool->get(0));
+		spine_elements_pool->set(0, elem);
+		return;
+	}
+	
+	SpineBatcher::Elements *used = spine_elements_pool->get(nidx);
+	used->pool_idx = elem->pool_idx;
+	elem->pool_idx = nidx;
+	spine_elements_pool->set(used->pool_idx, used);
+	spine_elements_pool->set(elem->pool_idx, elem);
+}
+
 SpineBatcher::SetBlendMode::SetBlendMode(int p_mode) {
 
 	cmd = CMD_SET_BLEND_MODE;
@@ -85,6 +142,8 @@ void SpineBatcher::Elements::draw(RID ci) {
 		p_points,
 		p_colors,
 		p_uvs,
+		Vector<int>(),
+		Vector<float>(),
 		texture->get_rid()
 	);
 
@@ -142,7 +201,8 @@ void SpineBatcher::push_elements() {
 		return;
 
 	element_list.push_back(elements);
-	elements = memnew(Elements);
+	//elements = memnew(Elements);
+	elements = spine_get_element();
 }
 
 void SpineBatcher::reset() {
@@ -150,14 +210,17 @@ void SpineBatcher::reset() {
 	for (List<Command *>::Element *E = drawed_list.front(); E; E = E->next()) {
 
 		Command *e = E->get();
-		memdelete(e);
+		//memdelete(e);
+		spine_resume_element((Elements*)e);
 	}
 	drawed_list.clear();
 }
 
 SpineBatcher::SpineBatcher(Node2D *owner) : owner(owner) {
 
-	elements = memnew(Elements);
+	//elements = memnew(Elements);
+	elements = spine_get_element();
+
 }
 
 SpineBatcher::~SpineBatcher() {
@@ -165,18 +228,21 @@ SpineBatcher::~SpineBatcher() {
 	for (List<Command *>::Element *E = element_list.front(); E; E = E->next()) {
 
 		Command *e = E->get();
-		memdelete(e);
+		//memdelete(e);
+		spine_resume_element((Elements*)e);
 	}
 	element_list.clear();
 
 	for (List<Command *>::Element *E = drawed_list.front(); E; E = E->next()) {
 
 		Command *e = E->get();
-		memdelete(e);
+		//memdelete(e);
+		spine_resume_element((Elements*)e);
 	}
 	drawed_list.clear();
 
-	memdelete(elements);
+	//memdelete(elements);
+	spine_resume_element((Elements*)elements);
 }
 
 #endif // MODULE_SPINE_ENABLED
