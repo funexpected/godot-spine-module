@@ -108,8 +108,12 @@ void Spine::_spine_dispose() {
 	if (skeleton)
 		spSkeleton_dispose(skeleton);
 
+	if (clipper)
+		spSkeletonClipping_dispose(clipper);
+
 	state = NULL;
 	skeleton = NULL;
+	clipper = NULL;
 	res = RES();
 
 	for (AttachmentNodes::Element *E = attachment_nodes.front(); E; E = E->next()) {
@@ -156,7 +160,7 @@ void Spine::_animation_draw() {
 	int additive = 0;
 	int fx_additive = 0;
 	Color color;
-	const float *uvs = NULL;
+	float *uvs = NULL;
 	int verties_count = 0;
 	unsigned short *triangles = NULL;
 	int triangles_count = 0;
@@ -171,7 +175,10 @@ void Spine::_animation_draw() {
 	for (int i = 0, n = skeleton->slotsCount; i < n; i++) {
 
 		spSlot *slot = skeleton->drawOrder[i];
-		if (!slot->attachment) continue;
+		if (!slot->attachment || slot->color.a == 0) {
+			spSkeletonClipping_clipEnd(clipper, slot);
+			continue;
+		}
 		bool is_fx = false;
 		Ref<Texture> texture;
 		switch (slot->attachment->type) {
@@ -179,6 +186,10 @@ void Spine::_animation_draw() {
 			case SP_ATTACHMENT_REGION: {
 
 				spRegionAttachment *attachment = (spRegionAttachment *)slot->attachment;
+				if (attachment->color.a == 0){
+					spSkeletonClipping_clipEnd(clipper, slot);
+					continue;
+				}
 				is_fx = strstr(attachment->path, fx_prefix) != NULL;
 				spRegionAttachment_computeWorldVertices(attachment, slot->bone, world_verts.ptrw(), 0, 2);
 				texture = spine_get_texture(attachment);
@@ -196,6 +207,10 @@ void Spine::_animation_draw() {
 			case SP_ATTACHMENT_MESH: {
 
 				spMeshAttachment *attachment = (spMeshAttachment *)slot->attachment;
+				if (attachment->color.a == 0){
+					spSkeletonClipping_clipEnd(clipper, slot);
+					continue;
+				}
 				is_fx = strstr(attachment->path, fx_prefix) != NULL;
 				spVertexAttachment_computeWorldVertices(SUPER(attachment), slot, 0, attachment->super.worldVerticesLength, world_verts.ptrw(), 0, 2);
 				texture = spine_get_texture(attachment);
@@ -210,13 +225,21 @@ void Spine::_animation_draw() {
 				break;
 			}
 
-			case SP_ATTACHMENT_BOUNDING_BOX: {
+			case SP_ATTACHMENT_CLIPPING: {
+				spClippingAttachment *attachment = (spClippingAttachment *)slot->attachment;
+				spSkeletonClipping_clipStart(clipper, slot, attachment);
+				continue;
+			}
 
+			default: {
+				spSkeletonClipping_clipEnd(clipper, slot);
 				continue;
 			}
 		}
-		if (texture.is_null())
+		if (texture.is_null()){
+			spSkeletonClipping_clipEnd(clipper, slot);
 			continue;
+		}
 		/*
 		if (is_fx && slot->data->blendMode != fx_additive) {
 
@@ -240,6 +263,21 @@ void Spine::_animation_draw() {
 		color.r = skeleton->color.r * slot->color.r * r;
 		color.g = skeleton->color.g * slot->color.g * g;
 		color.b = skeleton->color.b * slot->color.b * b;
+
+		if (spSkeletonClipping_isClipping(clipper)){
+			spSkeletonClipping_clipTriangles(clipper, world_verts.ptrw(), verties_count, triangles, triangles_count, uvs, 2);
+			if (clipper->clippedTriangles->size == 0){
+				spSkeletonClipping_clipEnd(clipper, slot);
+				continue;
+			}
+			world_verts.clear();
+			verties_count = clipper->clippedVertices->size;
+			world_verts.resize(verties_count);
+			memcpy(world_verts.ptrw(), clipper->clippedVertices->items, sizeof(float)*verties_count);
+			triangles = clipper->clippedTriangles->items;
+			triangles_count = clipper->clippedTriangles->size;
+			uvs = clipper->clippedUVs->items;
+		}
 
 		if (is_fx)
 			fx_batcher.add(texture, world_verts.ptr(), uvs, verties_count, triangles, triangles_count, &color, flip_x, flip_y);
@@ -440,9 +478,19 @@ bool Spine::_set(const StringName &p_name, const Variant &p_value) {
 			pc->rotateMix = p_value;
 		} else if (params[2] == "spacing"){
 			pc->spacing = p_value;
+		} 
+		spSkeleton_updateWorldTransform(skeleton);
+	} else if (name.begins_with("bone")){
+		if (skeleton == NULL) return true;
+		Vector<String> params = name.split("/");
+		if (params.size() != 3) return true;
+		spBone *bone = spSkeleton_findBone(skeleton, params[1].utf8().get_data());
+		ERR_FAIL_COND_V(bone==NULL, false);
+		if (params[2] == "rotation"){
+			bone->rotation = p_value;
 		}
 		spSkeleton_updateWorldTransform(skeleton);
-	} if (name == "playback/play") {
+	} else if (name == "playback/play") {
 
 		String which = p_value;
 		if (skeleton != NULL) {
@@ -637,6 +685,7 @@ void Spine::set_resource(Ref<Spine::SpineResource> p_data) {
 
 	skeleton = spSkeleton_create(res->data);
 	root_bone = skeleton->bones[0];
+	clipper = spSkeletonClipping_create();
 
 	state = spAnimationState_create(spAnimationStateData_create(skeleton->data));
 	state->rendererObject = this;
@@ -702,7 +751,7 @@ bool Spine::play(const String &p_name, real_t p_cunstom_scale, bool p_loop, int 
 	_set_process(true);
 	playing = true;
 	// update frame
-	//if (!is_active())
+	if (!is_active())
 		_animation_process(0);
 
 	return true;
@@ -1354,6 +1403,7 @@ Spine::Spine()
 
 	skeleton = NULL;
 	root_bone = NULL;
+	clipper = NULL;
 	state = NULL;
 	res = RES();
 	world_verts.resize(1000); // Max number of vertices per mesh.

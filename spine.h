@@ -79,6 +79,7 @@ private:
 	spSkeleton* skeleton;
 	spBone* root_bone;
 	spAnimationState* state;
+	spSkeletonClipping *clipper;
 	mutable Vector<float> world_verts;
 
 	float speed_scale;
