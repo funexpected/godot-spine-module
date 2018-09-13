@@ -216,6 +216,7 @@ void Spine::_animation_draw() {
 				texture = spine_get_texture(attachment);
 				uvs = attachment->uvs;
 				verties_count = ((spVertexAttachment *)attachment)->worldVerticesLength;
+
 				triangles = attachment->triangles;
 				triangles_count = attachment->trianglesCount;
 				r = attachment->color.r;
@@ -270,19 +271,17 @@ void Spine::_animation_draw() {
 				spSkeletonClipping_clipEnd(clipper, slot);
 				continue;
 			}
-			world_verts.clear();
-			verties_count = clipper->clippedVertices->size;
-			world_verts.resize(verties_count);
-			memcpy(world_verts.ptrw(), clipper->clippedVertices->items, sizeof(float)*verties_count);
-			triangles = clipper->clippedTriangles->items;
-			triangles_count = clipper->clippedTriangles->size;
-			uvs = clipper->clippedUVs->items;
-		}
-
-		if (is_fx)
+			batcher.add(texture, clipper->clippedVertices->items, 
+								 clipper->clippedUVs->items,
+								 clipper->clippedVertices->size,
+								 clipper->clippedTriangles->items,
+								 clipper->clippedTriangles->size,
+								 &color, flip_x, flip_y);
+		} else if (is_fx) {
 			fx_batcher.add(texture, world_verts.ptr(), uvs, verties_count, triangles, triangles_count, &color, flip_x, flip_y);
-		else
+		} else {
 			batcher.add(texture, world_verts.ptr(), uvs, verties_count, triangles, triangles_count, &color, flip_x, flip_y);
+		}
 	}
 	batcher.flush();
 	fx_node->update();
