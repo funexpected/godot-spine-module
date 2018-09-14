@@ -282,7 +282,9 @@ void Spine::_animation_draw() {
 		} else {
 			batcher.add(texture, world_verts.ptr(), uvs, verties_count, triangles, triangles_count, &color, flip_x, flip_y);
 		}
+		spSkeletonClipping_clipEnd(clipper, slot);
 	}
+	spSkeletonClipping_clipEnd2(clipper);
 	batcher.flush();
 	fx_node->update();
 
