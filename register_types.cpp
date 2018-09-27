@@ -43,15 +43,30 @@
 #include "scene/resources/texture.h"
 
 typedef Ref<Texture> TextureRef;
+typedef Ref<ImageTexture> ImageTextureRef;
 
 void _spAtlasPage_createTexture(spAtlasPage* self, const char* path) {
-
 	TextureRef *ref = memnew(TextureRef);
 	*ref = ResourceLoader::load(path);
-	ERR_FAIL_COND(ref->is_null());
-	self->rendererObject = ref;
-	self->width = (*ref)->get_width();
-	self->height = (*ref)->get_height();
+	if (!ref->is_null()){
+		self->rendererObject = ref;
+		self->width = (*ref)->get_width();
+		self->height = (*ref)->get_height();
+	} else {
+		memdelete(ref);
+		Ref<Image> img = memnew(Image);
+		if (img->load(path) == OK){
+			ImageTextureRef *imgtex = memnew(ImageTextureRef);
+			(*imgtex) = Ref<ImageTexture>(memnew(ImageTexture));
+			(*imgtex)->create_from_image(img);
+			self->rendererObject = imgtex;
+			self->width = (*imgtex)->get_width();
+			self->height = (*imgtex)->get_height();
+		} else {
+			ERR_FAIL();
+		}
+		
+	}
 }
 
 void _spAtlasPage_disposeTexture(spAtlasPage* self) {
