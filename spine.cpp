@@ -550,6 +550,17 @@ bool Spine::_get(const StringName &p_name, Variant &r_ret) const {
 		r_ret = is_debug_attachment(DEBUG_ATTACHMENT_SKINNED_MESH);
 	else if (name == "debug/bounding_box")
 		r_ret = is_debug_attachment(DEBUG_ATTACHMENT_BOUNDING_BOX);
+	else if (name.begins_with("bone")){
+		if (skeleton == NULL) return true;
+		Vector<String> params = name.split("/");
+		if (params.size() != 3) return true;
+		spBone *bone = spSkeleton_findBone(skeleton, params[1].utf8().get_data());
+		ERR_FAIL_COND_V(bone==NULL, false);
+		if (params[2] == "rotation")
+			r_ret = bone->rotation;
+		else if (params[2] == "position")
+			r_ret = Vector2(bone->x, bone->y);
+	}
 
 	return true;
 }
