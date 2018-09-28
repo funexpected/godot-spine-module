@@ -490,6 +490,11 @@ bool Spine::_set(const StringName &p_name, const Variant &p_value) {
 		if (params[2] == "rotation"){
 			bone->rotation = p_value;
 		}
+		else if (params[2] == "position"){
+			Vector2 v(p_value);
+			bone->x = v.x;
+			bone->y = v.y;
+		}
 		spSkeleton_updateWorldTransform(skeleton);
 	} else if (name == "playback/play") {
 
