@@ -968,11 +968,26 @@ Dictionary Spine::get_skeleton() const {
 	dict["bones"] = bones;
 
 	Array slots;
+	spSkin* skin = skeleton->data->defaultSkin;
 	for (int j=0; j<skeleton->slotsCount; j++){
 		spSlot *s = skeleton->slots[j];
-		slots.append(s->data->name);
+		Dictionary slot_dict;
+		slot_dict["name"] = s->data->name;
+		Array attachments;
+		int k=0;
+		while (true){
+			const char* attachment = spSkin_getAttachmentName(skin, j, k);
+			if (attachment == NULL){
+				break;
+			}
+			attachments.append(attachment);
+			k++;
+		}
+		slot_dict["attachments"] = attachments;
+		slots.append(slot_dict);
 	}
 	dict["slots"] = slots;
+
 
 	return dict;
 }
