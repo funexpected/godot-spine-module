@@ -496,6 +496,19 @@ bool Spine::_set(const StringName &p_name, const Variant &p_value) {
 			bone->y = v.y;
 		}
 		spSkeleton_updateWorldTransform(skeleton);
+	} else if (name.begins_with("slot")){
+		if (skeleton == NULL) return true;
+		Vector<String> params = name.split("/");
+		if (params.size() != 3) return true;
+		spSlot *slot = spSkeleton_findSlot(skeleton, params[1].utf8().get_data());
+		ERR_FAIL_COND_V(slot==NULL, false);
+		if (params[2] == "color"){
+			Color c = p_value;
+			slot->color.a = skeleton->color.a * c.a;
+			slot->color.r = skeleton->color.r * c.r;
+			slot->color.g = skeleton->color.r * c.g;
+			slot->color.b = skeleton->color.b * c.b;
+		}
 	} else if (name == "playback/play") {
 
 		String which = p_value;
@@ -805,8 +818,12 @@ void Spine::stop() {
 }
 
 bool Spine::is_playing(int p_track) const {
-
-	return playing && spAnimationState_getCurrent(state, p_track) != NULL;
+	if (!playing){
+		return false;
+	}
+	spTrackEntry *entry = spAnimationState_getCurrent(state, p_track);
+	if (entry == NULL) return false;
+	return entry->loop || entry->trackTime < entry->animationEnd;
 }
 
 void Spine::set_forward(bool p_forward) {
