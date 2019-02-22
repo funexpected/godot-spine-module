@@ -36,7 +36,7 @@ Vector< SpineBatcher::Elements* > *spine_elements_pool;
 int spine_elements_pool_last = 0;
 
 SpineBatcher::Elements* spine_get_element(){
-	//return memnew(SpineBatcher::Elements);
+	return memnew(SpineBatcher::Elements);
 	if (spine_elements_pool==NULL){
 		spine_elements_pool = memnew(Vector< SpineBatcher::Elements* >);
 	}
@@ -59,7 +59,7 @@ SpineBatcher::Elements* spine_get_element(){
 }
 
 void spine_resume_element(SpineBatcher::Elements *elem){
-	//return memdelete(elem);
+	return memdelete(elem);
 	if (!spine_elements_pool->size()) return;
 	int nidx = spine_elements_pool_last;
 	spine_elements_pool_last = nidx+1;
