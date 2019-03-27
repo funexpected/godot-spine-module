@@ -1103,6 +1103,11 @@ Dictionary Spine::get_slot(const String &p_slot_name) const {
 	ERR_FAIL_COND_V(slot == NULL, Variant());
 	Dictionary dict;
 	dict["color"] = Color(slot->color.r, slot->color.g, slot->color.b, slot->color.a);
+	if (slot->attachment == NULL) {
+		dict["attachment"] = Variant();
+	} else {
+		dict["attachment"] = slot->attachment->name;
+	}
 	return dict;
 }
 
