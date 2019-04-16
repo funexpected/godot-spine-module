@@ -400,7 +400,8 @@ void Spine::_animation_draw() {
 }
 
 void Spine::_animation_process(float p_delta) {
-
+	if (!is_inside_tree())
+		return;
 	if (speed_scale == 0)
 		return;
 	p_delta *= speed_scale;
@@ -693,11 +694,6 @@ void Spine::_notification(int p_what) {
 		case NOTIFICATION_DRAW: {
 
 			_animation_draw();
-		} break;
-
-		case NOTIFICATION_EXIT_TREE: {
-
-			stop_all();
 		} break;
 	}
 }
