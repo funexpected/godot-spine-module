@@ -81,7 +81,7 @@ void spine_resume_element(SpineBatcher::Elements *elem){
 		spine_elements_pool->set(0, elem);
 		return;
 	}
-	
+
 	SpineBatcher::Elements *used = spine_elements_pool->get(nidx);
 	used->pool_idx = elem->pool_idx;
 	elem->pool_idx = nidx;
@@ -152,7 +152,7 @@ void SpineBatcher::Elements::draw(RID ci) {
 void SpineBatcher::add(Ref<Texture> p_texture,
 	const float* p_vertices, const float* p_uvs, int p_vertices_count,
 	const unsigned short* p_indies, int p_indies_count,
-	Color *p_color, bool flip_x, bool flip_y) {
+	Color *p_color, bool flip_x, bool flip_y, int index_item) {
 
 	if (p_texture != elements->texture
 		|| elements->vertices_count + (p_vertices_count >> 1) > BATCH_CAPACITY
@@ -170,7 +170,7 @@ void SpineBatcher::add(Ref<Texture> p_texture,
 		elements->vertices[elements->vertices_count].x = flip_x ? -p_vertices[i] : p_vertices[i];
 		elements->vertices[elements->vertices_count].y = flip_y ? p_vertices[i + 1] : -p_vertices[i + 1];
 		elements->colors[elements->vertices_count] = *p_color;
-		elements->uvs[elements->vertices_count].x = p_uvs[i];
+		elements->uvs[elements->vertices_count].x = p_uvs[i] + index_item;
 		elements->uvs[elements->vertices_count].y = p_uvs[i + 1];
 	}
 }
@@ -246,4 +246,3 @@ SpineBatcher::~SpineBatcher() {
 }
 
 #endif // MODULE_SPINE_ENABLED
-

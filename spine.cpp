@@ -271,19 +271,21 @@ void Spine::_animation_draw() {
 				spSkeletonClipping_clipEnd(clipper, slot);
 				continue;
 			}
-			batcher.add(texture, clipper->clippedVertices->items, 
+			batcher.add(texture, clipper->clippedVertices->items,
 								 clipper->clippedUVs->items,
 								 clipper->clippedVertices->size,
 								 clipper->clippedTriangles->items,
 								 clipper->clippedTriangles->size,
-								 &color, flip_x, flip_y);
+								 &color, flip_x, flip_y, (slot->data->index)*individual_textures);
 		} else if (is_fx) {
-			fx_batcher.add(texture, world_verts.ptr(), uvs, verties_count, triangles, triangles_count, &color, flip_x, flip_y);
+			fx_batcher.add(texture, world_verts.ptr(), uvs, verties_count, triangles, triangles_count, &color, flip_x, flip_y, (slot->data->index)*individual_textures);
 		} else {
-			batcher.add(texture, world_verts.ptr(), uvs, verties_count, triangles, triangles_count, &color, flip_x, flip_y);
+			batcher.add(texture, world_verts.ptr(), uvs, verties_count, triangles, triangles_count, &color, flip_x, flip_y, (slot->data->index)*individual_textures);
 		}
 		spSkeletonClipping_clipEnd(clipper, slot);
 	}
+
+
 	spSkeletonClipping_clipEnd2(clipper);
 	batcher.flush();
 	fx_node->update();
@@ -479,7 +481,7 @@ bool Spine::_set(const StringName &p_name, const Variant &p_value) {
 			pc->rotateMix = p_value;
 		} else if (params[2] == "spacing"){
 			pc->spacing = p_value;
-		} 
+		}
 		spSkeleton_updateWorldTransform(skeleton);
 	} else if (name.begins_with("bone")){
 		if (skeleton == NULL) return true;
@@ -937,6 +939,15 @@ void Spine::set_flip_x(bool p_flip) {
 	update();
 }
 
+void Spine::set_individual_textures(bool is_individual)	{
+	individual_textures = is_individual;
+	update();
+}
+
+bool Spine::get_individual_textures() const {
+	return individual_textures;
+}
+
 void Spine::set_flip_y(bool p_flip) {
 
 	flip_y = p_flip;
@@ -1005,6 +1016,14 @@ Dictionary Spine::get_skeleton() const {
 	}
 	dict["slots"] = slots;
 
+ if (individual_textures) {
+		Dictionary slot_dict;
+		for (int i = 0, n = skeleton->slotsCount; i < n; i++) {
+			spSlot *s = skeleton->drawOrder[i];
+			slot_dict[s->data->name] = s->data->index;
+		}
+		dict["item_indexes"] = slot_dict;
+	}
 
 	return dict;
 }
@@ -1330,6 +1349,8 @@ void Spine::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("set_skip_frames", "frames"), &Spine::set_skip_frames);
 	ClassDB::bind_method(D_METHOD("get_skip_frames"), &Spine::get_skip_frames);
 	ClassDB::bind_method(D_METHOD("set_flip_x", "fliped"), &Spine::set_flip_x);
+	ClassDB::bind_method(D_METHOD("set_individual_textures", "individual_textures"), &Spine::set_individual_textures);
+	ClassDB::bind_method(D_METHOD("get_individual_textures"), &Spine::get_individual_textures);
 	ClassDB::bind_method(D_METHOD("is_flip_x"), &Spine::is_flip_x);
 	ClassDB::bind_method(D_METHOD("set_flip_y", "fliped"), &Spine::set_flip_y);
 	ClassDB::bind_method(D_METHOD("is_flip_y"), &Spine::is_flip_y);
@@ -1365,6 +1386,7 @@ void Spine::_bind_methods() {
 	ADD_PROPERTY(PropertyInfo(Variant::BOOL, "debug_bones"), "set_debug_bones", "is_debug_bones");
 
 	ADD_PROPERTY(PropertyInfo(Variant::BOOL, "flip_x"), "set_flip_x", "is_flip_x");
+	ADD_PROPERTY(PropertyInfo(Variant::BOOL, "individual_textures"), "set_individual_textures", "get_individual_textures");
 	ADD_PROPERTY(PropertyInfo(Variant::BOOL, "flip_y"), "set_flip_y", "is_flip_y");
 	ADD_PROPERTY(PropertyInfo(Variant::STRING, "fx_prefix"), "set_fx_slot_prefix", "get_fx_slot_prefix");
 	ADD_PROPERTY(PropertyInfo(Variant::OBJECT, "resource", PROPERTY_HINT_RESOURCE_TYPE, "SpineResource"), "set_resource", "get_resource"); //, PROPERTY_USAGE_NOEDITOR));
@@ -1487,6 +1509,7 @@ Spine::Spine()
 	modulate = Color(1, 1, 1, 1);
 	flip_x = false;
 	flip_y = false;
+	individual_textures = false;
 }
 
 Spine::~Spine() {

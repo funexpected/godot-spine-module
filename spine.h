@@ -56,7 +56,7 @@ public:
 		DEBUG_ATTACHMENT_MESH,
 		DEBUG_ATTACHMENT_SKINNED_MESH,
 		DEBUG_ATTACHMENT_BOUNDING_BOX,
-		
+
 	};
 
 	class SpineResource : public Resource {
@@ -103,6 +103,7 @@ private:
 
 	Color modulate;
 	bool flip_x, flip_y;
+	bool individual_textures;
 	SpineBatcher batcher;
 
 	// fx slots (always show on top)
@@ -185,6 +186,8 @@ public:
 
 	void set_flip_x(bool p_flip);
 	void set_flip_y(bool p_flip);
+	void set_individual_textures(bool is_individual);
+	bool get_individual_textures() const;
 	bool is_flip_x() const;
 	bool is_flip_y() const;
 
@@ -241,4 +244,3 @@ public:
 
 #endif // SPINE_H
 #endif // MODULE_SPINE_ENABLED
-

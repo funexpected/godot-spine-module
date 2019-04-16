@@ -87,7 +87,7 @@ public:
 	void add(Ref<Texture> p_texture,
 		const float* p_vertices, const float* p_uvs, int p_vertices_count,
 		const unsigned short* p_indies, int p_indies_count,
-		Color *p_color, bool flip_x, bool flip_y);
+		Color *p_color, bool flip_x, bool flip_y, int index_item = 0);
 
 	void add_set_blender_mode(bool p_mode);
 
