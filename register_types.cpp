@@ -132,17 +132,17 @@ public:
 			json->scale = 1;
 
 			res->data = spSkeletonJson_readSkeletonDataFile(json, p_path.utf8().get_data());
-			ERR_EXPLAIN(json->error ? json->error : "");
+			String err_msg = json->error ? json->error : "";
 			spSkeletonJson_dispose(json);
-			ERR_FAIL_COND_V(res->data == NULL, RES());
+			ERR_FAIL_COND_V_MSG(res->data == NULL, RES(), err_msg);
 		} else {
 			spSkeletonBinary* bin  = spSkeletonBinary_create(res->atlas);
 			ERR_FAIL_COND_V(bin == NULL, RES());
 			bin->scale = 1;
 			res->data = spSkeletonBinary_readSkeletonDataFile(bin, p_path.utf8().get_data());
-			ERR_EXPLAIN(bin->error ? bin->error : "");
+			String err_msg = bin->error ? bin->error : "";
 			spSkeletonBinary_dispose(bin);
-			ERR_FAIL_COND_V(res->data == NULL, RES());
+			ERR_FAIL_COND_V_MSG(res->data == NULL, RES(), err_msg);
 		}
 
 		res->set_path(p_path);
