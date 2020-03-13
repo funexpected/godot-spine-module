@@ -144,7 +144,8 @@ void SpineBatcher::Elements::draw(RID ci) {
 		p_uvs,
 		Vector<int>(),
 		Vector<float>(),
-		texture->get_rid()
+		texture->get_rid(), -1, RID(),
+		false, false
 	);
 
 }
