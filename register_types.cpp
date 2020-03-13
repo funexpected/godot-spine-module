@@ -35,6 +35,7 @@
 
 #include <spine/extension.h>
 #include <spine/spine.h>
+#include "include/spine/Atlas.h"
 #include "spine.h"
 
 #include "core/os/file_access.h"
@@ -80,7 +81,7 @@ char* _spUtil_readFile(const char* p_path, int* p_length) {
 
 	String str_path = String::utf8(p_path);
 	FileAccess *f = FileAccess::open(p_path, FileAccess::READ);
-	ERR_FAIL_COND_V(!f, NULL);
+	ERR_FAIL_COND_V_MSG(!f, NULL, "Can't read file " + String(p_path));
 
 	*p_length = f->get_len();
 
@@ -155,6 +156,23 @@ public:
 		p_extensions->push_back("skel");
 		p_extensions->push_back("json");
 		p_extensions->push_back("atlas");
+	}
+
+	virtual void get_dependencies(const String &p_path, List<String> *p_dependencies, bool p_add_types) {
+		print_line("get_dependencies for " + p_path);
+		String base_dir = p_path.get_base_dir();
+		String base_name = p_path.get_basename();
+		String atlas_path = base_name + ".atlas";
+		if (!FileAccess::exists(atlas_path)) return;
+		p_dependencies->push_back(atlas_path);
+		Vector<uint8_t> bytes = FileAccess::get_file_as_array(atlas_path);
+		spAtlas *atlas = spAtlas_create((const char*)bytes.ptr(), bytes.size(), base_dir.utf8(), NULL);
+		spAtlasPage *page = atlas->pages;
+		while (page) {
+			p_dependencies->push_back(base_dir + "/" + page->name);
+			page = page->next;
+		}
+		spAtlas_dispose(atlas);
 	}
 
 	virtual bool handles_type(const String& p_type) const {
