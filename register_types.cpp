@@ -189,13 +189,13 @@ public:
 	}
 };
 
-static ResourceFormatLoaderSpine *resource_loader_spine = NULL;
+Ref<ResourceFormatLoaderSpine> resource_loader_spine;
 
 void register_spine_types() {
 
 	ClassDB::register_class<Spine>();
 	ClassDB::register_class<Spine::SpineResource>();
-	resource_loader_spine = memnew( ResourceFormatLoaderSpine );
+	resource_loader_spine.instance();
 	ResourceLoader::add_resource_format_loader(resource_loader_spine);
 
 	_spSetMalloc(spine_malloc);
@@ -205,8 +205,8 @@ void register_spine_types() {
 
 void unregister_spine_types() {
 
-	if (resource_loader_spine)
-		memdelete(resource_loader_spine);
+	ResourceLoader::remove_resource_format_loader(resource_loader_spine);
+	resource_loader_spine.unref();
 
 }
 
