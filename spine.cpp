@@ -653,6 +653,9 @@ void Spine::_get_property_list(List<PropertyInfo> *p_list) const {
 void Spine::_notification(int p_what) {
 
 	switch (p_what) {
+		case NOTIFICATION_PREDELETE: {
+			emit_signal("predelete");
+		}
 
 		case NOTIFICATION_ENTER_TREE: {
 
@@ -1391,6 +1394,7 @@ void Spine::_bind_methods() {
 	ADD_SIGNAL(MethodInfo("animation_complete", PropertyInfo(Variant::INT, "track"), PropertyInfo(Variant::INT, "loop_count")));
 	ADD_SIGNAL(MethodInfo("animation_event", PropertyInfo(Variant::INT, "track"), PropertyInfo(Variant::DICTIONARY, "event")));
 	ADD_SIGNAL(MethodInfo("animation_end", PropertyInfo(Variant::INT, "track")));
+	ADD_SIGNAL(MethodInfo("predelete"));
 
 	BIND_ENUM_CONSTANT(ANIMATION_PROCESS_FIXED);
 	BIND_ENUM_CONSTANT(ANIMATION_PROCESS_IDLE);
