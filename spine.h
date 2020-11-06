@@ -42,6 +42,7 @@ class CollisionObject2D;
 class Spine : public Node2D {
 
 	GDCLASS(Spine, Node2D);
+friend class SpineBatchingQueue;
 
 public:
 	enum AnimationProcessMode {
@@ -108,7 +109,7 @@ private:
 
 	// fx slots (always show on top)
 	Node2D *fx_node;
-	SpineBatcher fx_batcher;
+	//SpineBatcher fx_batcher;
 	CharString fx_slot_prefix;
 
 	float current_pos;
@@ -129,6 +130,7 @@ private:
 
 	void _spine_dispose();
 	void _animation_process(float p_delta);
+	void _animation_build();
 	void _animation_draw();
 	void _set_process(bool p_process, bool p_force = false);
 	void _on_fx_draw();

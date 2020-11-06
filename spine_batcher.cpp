@@ -32,62 +32,6 @@
 
 #define BATCH_CAPACITY 1024
 
-Vector< SpineBatcher::Elements* > *spine_elements_pool;
-int spine_elements_pool_last = 0;
-
-SpineBatcher::Elements* spine_get_element(){
-	return memnew(SpineBatcher::Elements);
-	if (spine_elements_pool==NULL){
-		spine_elements_pool = memnew(Vector< SpineBatcher::Elements* >);
-	}
-	if (spine_elements_pool_last==0){
-		for (int i=0; i<spine_elements_pool->size(); i++){
-			spine_elements_pool->get(i)->pool_idx += 1024;
-		}
-		for (int i=0; i<1024; i++){
-			SpineBatcher::Elements *elem = memnew(SpineBatcher::Elements);
-			elem->pool_idx = 1023-i;
-			spine_elements_pool->insert(0, elem);
-		}
-		spine_elements_pool_last = 1024;
-	}
-	spine_elements_pool_last--;
-	return spine_elements_pool->get(spine_elements_pool_last);
-	//SpineBatcher::Elements *elem = spine_elements_pool->get(spine_elements_pool_last);
-	//elem->pool_idx = spine_elements_pool_last;
-	//return elem;
-}
-
-void spine_resume_element(SpineBatcher::Elements *elem){
-	return memdelete(elem);
-	if (!spine_elements_pool->size()) return;
-	int nidx = spine_elements_pool_last;
-	spine_elements_pool_last = nidx+1;
-	if (spine_elements_pool_last == spine_elements_pool->size()){
-		for (int i=0; i<spine_elements_pool->size(); i++){
-			memdelete(spine_elements_pool->get(i));
-		}
-		spine_elements_pool->resize(0);
-		return;
-	}
-	elem->texture = Ref<Texture>();
-	elem->vertices_count = 0;
-	elem->indies_count = 0;
-
-	if (elem->pool_idx == nidx){
-		spine_elements_pool->get(0)->pool_idx = nidx;
-		elem->pool_idx = 0;
-		spine_elements_pool->set(nidx, spine_elements_pool->get(0));
-		spine_elements_pool->set(0, elem);
-		return;
-	}
-
-	SpineBatcher::Elements *used = spine_elements_pool->get(nidx);
-	used->pool_idx = elem->pool_idx;
-	elem->pool_idx = nidx;
-	spine_elements_pool->set(used->pool_idx, used);
-	spine_elements_pool->set(elem->pool_idx, elem);
-}
 
 SpineBatcher::SetBlendMode::SetBlendMode(int p_mode) {
 
@@ -117,9 +61,24 @@ SpineBatcher::Elements::~Elements() {
 	memdelete_arr(colors);
 	memdelete_arr(uvs);
 	memdelete_arr(indies);
+	VisualServer::get_singleton()->free(mesh);
+	//mesh.unref()
+	//VisualServer::get_singleton()->free(mesh->get_rid());
 }
 
 void SpineBatcher::Elements::draw(RID ci) {
+	if (!mesh.is_valid()) return;
+	VisualServer::get_singleton()->canvas_item_add_mesh(
+		ci, mesh,
+		Transform2D(), 
+		Color(1,1,1), 
+		texture->get_rid()
+	);
+}
+
+void SpineBatcher::Elements::build() {
+	if (mesh.is_valid()) return;
+	mesh = VisualServer::get_singleton()->mesh_create();
 
 	Vector<int> p_indices;
 	p_indices.resize(indies_count);
@@ -137,17 +96,18 @@ void SpineBatcher::Elements::draw(RID ci) {
 	p_uvs.resize(vertices_count);
 	memcpy(p_uvs.ptrw(), uvs, vertices_count * sizeof(Vector2));
 
-	VisualServer::get_singleton()->canvas_item_add_triangle_array(ci,
-		p_indices,
-		p_points,
-		p_colors,
-		p_uvs,
-		Vector<int>(),
-		Vector<float>(),
-		texture->get_rid(), -1, RID(),
-		false, false
+	Array arrays;
+	arrays.resize(Mesh::ARRAY_MAX);
+	arrays[Mesh::ARRAY_VERTEX] = p_points;
+	arrays[Mesh::ARRAY_INDEX] = p_indices;
+	arrays[Mesh::ARRAY_COLOR] = p_colors;
+	arrays[Mesh::ARRAY_TEX_UV] = p_uvs;
+	VisualServer::get_singleton()->mesh_add_surface_from_arrays(
+		mesh,
+		VisualServer::PRIMITIVE_TRIANGLES,
+		arrays, Array(),
+		VisualServer::ARRAY_FLAG_USE_2D_VERTICES
 	);
-
 }
 
 void SpineBatcher::add(Ref<Texture> p_texture,
@@ -182,18 +142,28 @@ void SpineBatcher::add_set_blender_mode(bool p_mode) {
 	element_list.push_back(memnew(SetBlendMode(p_mode)));
 }
 
-void SpineBatcher::flush() {
-
-	RID ci = owner->get_canvas_item();
+void SpineBatcher::build() {
 	push_elements();
 
 	for (List<Command *>::Element *E = element_list.front(); E; E = E->next()) {
 
 		Command *e = E->get();
+		e->build();
+		built_list.push_back(e);
+	}
+	element_list.clear();
+}
+
+void SpineBatcher::draw() {
+	RID ci = owner->get_canvas_item();
+	for (List<Command *>::Element *E = built_list.front(); E; E = E->next()) {
+
+		Command *e = E->get();
 		e->draw(ci);
 		drawed_list.push_back(e);
 	}
-	element_list.clear();
+	built_list.clear();
+
 }
 
 void SpineBatcher::push_elements() {
@@ -202,8 +172,7 @@ void SpineBatcher::push_elements() {
 		return;
 
 	element_list.push_back(elements);
-	//elements = memnew(Elements);
-	elements = spine_get_element();
+	elements = memnew(Elements);
 }
 
 void SpineBatcher::reset() {
@@ -211,17 +180,15 @@ void SpineBatcher::reset() {
 	for (List<Command *>::Element *E = drawed_list.front(); E; E = E->next()) {
 
 		Command *e = E->get();
-		//memdelete(e);
-		spine_resume_element((Elements*)e);
+		
+		memdelete(e);
 	}
 	drawed_list.clear();
 }
 
 SpineBatcher::SpineBatcher(Node2D *owner) : owner(owner) {
 
-	//elements = memnew(Elements);
-	elements = spine_get_element();
-
+	elements = memnew(Elements);
 }
 
 SpineBatcher::~SpineBatcher() {
@@ -230,20 +197,25 @@ SpineBatcher::~SpineBatcher() {
 
 		Command *e = E->get();
 		//memdelete(e);
-		spine_resume_element((Elements*)e);
+		memdelete(e);
 	}
 	element_list.clear();
+
+	for (List<Command *>::Element *E = built_list.front(); E; E = E->next()) {
+
+		Command *e = E->get();
+		memdelete(e);
+	}
+	built_list.clear();
 
 	for (List<Command *>::Element *E = drawed_list.front(); E; E = E->next()) {
 
 		Command *e = E->get();
-		//memdelete(e);
-		spine_resume_element((Elements*)e);
+		memdelete(e);
 	}
 	drawed_list.clear();
+	memdelete(elements);
 
-	//memdelete(elements);
-	spine_resume_element((Elements*)elements);
 }
 
 #endif // MODULE_SPINE_ENABLED

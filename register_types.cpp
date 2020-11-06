@@ -37,6 +37,7 @@
 #include <spine/spine.h>
 #include "include/spine/Atlas.h"
 #include "spine.h"
+#include "spine_batching_queue.h"
 
 #include "core/os/file_access.h"
 #include "core/os/os.h"
@@ -201,10 +202,12 @@ void register_spine_types() {
 	_spSetMalloc(spine_malloc);
 	_spSetRealloc(spine_realloc);
 	_spSetFree(spine_free);
+
+	SpineBatchingQueue::create_instance();
 }
 
 void unregister_spine_types() {
-
+	SpineBatchingQueue::get_instance()->finish();
 	ResourceLoader::remove_resource_format_loader(resource_loader_spine);
 	resource_loader_spine.unref();
 

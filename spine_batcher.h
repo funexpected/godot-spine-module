@@ -34,6 +34,7 @@
 
 #include "scene/2d/node_2d.h"
 
+
 class SpineBatcher {
 
 	Node2D *owner;
@@ -49,6 +50,7 @@ class SpineBatcher {
 
 		int cmd;
 		virtual void draw(RID ci) {}
+		virtual void build() {}
 	};
 
 	struct SetBlendMode : Command {
@@ -59,6 +61,7 @@ class SpineBatcher {
 	};
 public:
 	struct Elements : Command {
+		RID mesh;
 		Ref<Texture> texture;
 		int vertices_count;
 		int indies_count;
@@ -71,11 +74,13 @@ public:
 		Elements();
 		~Elements();
 		void draw(RID ci);
+		void build();
 	};
 
 	Elements *elements;
 
 	List<Command *> element_list;
+	List<Command *> built_list;
 	List<Command *> drawed_list;
 
 	void push_elements();
@@ -91,11 +96,13 @@ public:
 
 	void add_set_blender_mode(bool p_mode);
 
-	void flush();
+	void build();
+	void draw();
 
 	SpineBatcher(Node2D *owner);
 	~SpineBatcher();
 };
+
 
 #endif // SPINE_BATCHER_H
 

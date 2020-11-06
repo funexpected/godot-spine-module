@@ -30,6 +30,7 @@
 #ifdef MODULE_SPINE_ENABLED
 
 #include "spine.h"
+#include "spine_batching_queue.h"
 #include "core/io/resource_loader.h"
 #include "scene/2d/collision_object_2d.h"
 #include "scene/resources/convex_polygon_shape_2d.h"
@@ -144,151 +145,20 @@ void Spine::_on_fx_draw() {
 
 	if (skeleton == NULL)
 		return;
-	fx_batcher.reset();
-	RID eci = fx_node->get_canvas_item();
+	//fx_batcher.reset();
+	//RID eci = fx_node->get_canvas_item();
 	// VisualServer::get_singleton()->canvas_item_add_set_blend_mode(eci, VS::MaterialBlendMode(fx_node->get_blend_mode()));
-	fx_batcher.flush();
+	//fx_batcher.flush();
 }
 
 void Spine::_animation_draw() {
+	batcher.reset();
+	batcher.draw();
 
-	if (skeleton == NULL)
-		return;
-
-	spColor_setFromFloats(&skeleton->color, modulate.r, modulate.g, modulate.b, modulate.a);
-
-	int additive = 0;
-	int fx_additive = 0;
-	Color color;
-	float *uvs = NULL;
+	// Deaw debug info
 	int verties_count = 0;
 	unsigned short *triangles = NULL;
 	int triangles_count = 0;
-	float r = 0, g = 0, b = 0, a = 0;
-
-	RID ci = this->get_canvas_item();
-	batcher.reset();
-	// VisualServer::get_singleton()->canvas_item_add_set_blend_mode(ci, VS::MaterialBlendMode(get_blend_mode()));
-
-	const char *fx_prefix = fx_slot_prefix.get_data();
-
-	for (int i = 0, n = skeleton->slotsCount; i < n; i++) {
-
-		spSlot *slot = skeleton->drawOrder[i];
-		if (!slot->attachment || slot->color.a == 0) {
-			spSkeletonClipping_clipEnd(clipper, slot);
-			continue;
-		}
-		bool is_fx = false;
-		Ref<Texture> texture;
-		switch (slot->attachment->type) {
-
-			case SP_ATTACHMENT_REGION: {
-
-				spRegionAttachment *attachment = (spRegionAttachment *)slot->attachment;
-				if (attachment->color.a == 0){
-					spSkeletonClipping_clipEnd(clipper, slot);
-					continue;
-				}
-				is_fx = strstr(attachment->path, fx_prefix) != NULL;
-				spRegionAttachment_computeWorldVertices(attachment, slot->bone, world_verts.ptrw(), 0, 2);
-				texture = spine_get_texture(attachment);
-				uvs = attachment->uvs;
-				verties_count = 8;
-				static unsigned short quadTriangles[6] = { 0, 1, 2, 2, 3, 0 };
-				triangles = quadTriangles;
-				triangles_count = 6;
-				r = attachment->color.r;
-				g = attachment->color.g;
-				b = attachment->color.b;
-				a = attachment->color.a;
-				break;
-			}
-			case SP_ATTACHMENT_MESH: {
-
-				spMeshAttachment *attachment = (spMeshAttachment *)slot->attachment;
-				if (attachment->color.a == 0){
-					spSkeletonClipping_clipEnd(clipper, slot);
-					continue;
-				}
-				is_fx = strstr(attachment->path, fx_prefix) != NULL;
-				spVertexAttachment_computeWorldVertices(SUPER(attachment), slot, 0, attachment->super.worldVerticesLength, world_verts.ptrw(), 0, 2);
-				texture = spine_get_texture(attachment);
-				uvs = attachment->uvs;
-				verties_count = ((spVertexAttachment *)attachment)->worldVerticesLength;
-
-				triangles = attachment->triangles;
-				triangles_count = attachment->trianglesCount;
-				r = attachment->color.r;
-				g = attachment->color.g;
-				b = attachment->color.b;
-				a = attachment->color.a;
-				break;
-			}
-
-			case SP_ATTACHMENT_CLIPPING: {
-				spClippingAttachment *attachment = (spClippingAttachment *)slot->attachment;
-				spSkeletonClipping_clipStart(clipper, slot, attachment);
-				continue;
-			}
-
-			default: {
-				spSkeletonClipping_clipEnd(clipper, slot);
-				continue;
-			}
-		}
-		if (texture.is_null()){
-			spSkeletonClipping_clipEnd(clipper, slot);
-			continue;
-		}
-		/*
-		if (is_fx && slot->data->blendMode != fx_additive) {
-
-			fx_batcher.add_set_blender_mode(slot->data->additiveBlending
-				? VisualServer::MATERIAL_BLEND_MODE_ADD
-				: get_blend_mode()
-			);
-			fx_additive = slot->data->additiveBlending;
-		}
-		else if (slot->data->additiveBlending != additive) {
-
-			batcher.add_set_blender_mode(slot->data->additiveBlending
-				? VisualServer::MATERIAL_BLEND_MODE_ADD
-				: fx_node->get_blend_mode()
-			);
-			additive = slot->data->additiveBlending;
-		}
-		 */
-
-		color.a = skeleton->color.a * slot->color.a * a;
-		color.r = skeleton->color.r * slot->color.r * r;
-		color.g = skeleton->color.g * slot->color.g * g;
-		color.b = skeleton->color.b * slot->color.b * b;
-
-		if (spSkeletonClipping_isClipping(clipper)){
-			spSkeletonClipping_clipTriangles(clipper, world_verts.ptrw(), verties_count, triangles, triangles_count, uvs, 2);
-			if (clipper->clippedTriangles->size == 0){
-				spSkeletonClipping_clipEnd(clipper, slot);
-				continue;
-			}
-			batcher.add(texture, clipper->clippedVertices->items,
-								 clipper->clippedUVs->items,
-								 clipper->clippedVertices->size,
-								 clipper->clippedTriangles->items,
-								 clipper->clippedTriangles->size,
-								 &color, flip_x, flip_y, (slot->data->index)*individual_textures);
-		} else if (is_fx) {
-			fx_batcher.add(texture, world_verts.ptr(), uvs, verties_count, triangles, triangles_count, &color, flip_x, flip_y, (slot->data->index)*individual_textures);
-		} else {
-			batcher.add(texture, world_verts.ptr(), uvs, verties_count, triangles, triangles_count, &color, flip_x, flip_y, (slot->data->index)*individual_textures);
-		}
-		spSkeletonClipping_clipEnd(clipper, slot);
-	}
-
-
-	spSkeletonClipping_clipEnd2(clipper);
-	batcher.flush();
-	fx_node->update();
 
 	// Slots.
 	if (debug_attachment_region || debug_attachment_mesh || debug_attachment_skinned_mesh || debug_attachment_bounding_box) {
@@ -399,6 +269,146 @@ void Spine::_animation_draw() {
 	}
 }
 
+void Spine::_animation_build() {
+
+	if (skeleton == NULL)
+		return;
+
+	spColor_setFromFloats(&skeleton->color, modulate.r, modulate.g, modulate.b, modulate.a);
+
+	int additive = 0;
+	int fx_additive = 0;
+	Color color;
+	float *uvs = NULL;
+	int verties_count = 0;
+	unsigned short *triangles = NULL;
+	int triangles_count = 0;
+	float r = 0, g = 0, b = 0, a = 0;
+
+	RID ci = this->get_canvas_item();
+	// VisualServer::get_singleton()->canvas_item_add_set_blend_mode(ci, VS::MaterialBlendMode(get_blend_mode()));
+
+	const char *fx_prefix = fx_slot_prefix.get_data();
+
+	for (int i = 0, n = skeleton->slotsCount; i < n; i++) {
+
+		spSlot *slot = skeleton->drawOrder[i];
+		if (!slot->attachment || slot->color.a == 0) {
+			spSkeletonClipping_clipEnd(clipper, slot);
+			continue;
+		}
+		bool is_fx = false;
+		Ref<Texture> texture;
+		switch (slot->attachment->type) {
+
+			case SP_ATTACHMENT_REGION: {
+
+				spRegionAttachment *attachment = (spRegionAttachment *)slot->attachment;
+				if (attachment->color.a == 0){
+					spSkeletonClipping_clipEnd(clipper, slot);
+					continue;
+				}
+				is_fx = strstr(attachment->path, fx_prefix) != NULL;
+				spRegionAttachment_computeWorldVertices(attachment, slot->bone, world_verts.ptrw(), 0, 2);
+				texture = spine_get_texture(attachment);
+				uvs = attachment->uvs;
+				verties_count = 8;
+				static unsigned short quadTriangles[6] = { 0, 1, 2, 2, 3, 0 };
+				triangles = quadTriangles;
+				triangles_count = 6;
+				r = attachment->color.r;
+				g = attachment->color.g;
+				b = attachment->color.b;
+				a = attachment->color.a;
+				break;
+			}
+			case SP_ATTACHMENT_MESH: {
+
+				spMeshAttachment *attachment = (spMeshAttachment *)slot->attachment;
+				if (attachment->color.a == 0){
+					spSkeletonClipping_clipEnd(clipper, slot);
+					continue;
+				}
+				is_fx = strstr(attachment->path, fx_prefix) != NULL;
+				spVertexAttachment_computeWorldVertices(SUPER(attachment), slot, 0, attachment->super.worldVerticesLength, world_verts.ptrw(), 0, 2);
+				texture = spine_get_texture(attachment);
+				uvs = attachment->uvs;
+				verties_count = ((spVertexAttachment *)attachment)->worldVerticesLength;
+
+				triangles = attachment->triangles;
+				triangles_count = attachment->trianglesCount;
+				r = attachment->color.r;
+				g = attachment->color.g;
+				b = attachment->color.b;
+				a = attachment->color.a;
+				break;
+			}
+
+			case SP_ATTACHMENT_CLIPPING: {
+				spClippingAttachment *attachment = (spClippingAttachment *)slot->attachment;
+				spSkeletonClipping_clipStart(clipper, slot, attachment);
+				continue;
+			}
+
+			default: {
+				spSkeletonClipping_clipEnd(clipper, slot);
+				continue;
+			}
+		}
+		if (texture.is_null()){
+			spSkeletonClipping_clipEnd(clipper, slot);
+			continue;
+		}
+		/*
+		if (is_fx && slot->data->blendMode != fx_additive) {
+
+			fx_batcher.add_set_blender_mode(slot->data->additiveBlending
+				? VisualServer::MATERIAL_BLEND_MODE_ADD
+				: get_blend_mode()
+			);
+			fx_additive = slot->data->additiveBlending;
+		}
+		else if (slot->data->additiveBlending != additive) {
+
+			batcher.add_set_blender_mode(slot->data->additiveBlending
+				? VisualServer::MATERIAL_BLEND_MODE_ADD
+				: fx_node->get_blend_mode()
+			);
+			additive = slot->data->additiveBlending;
+		}
+		 */
+
+		color.a = skeleton->color.a * slot->color.a * a;
+		color.r = skeleton->color.r * slot->color.r * r;
+		color.g = skeleton->color.g * slot->color.g * g;
+		color.b = skeleton->color.b * slot->color.b * b;
+
+		if (spSkeletonClipping_isClipping(clipper)){
+			spSkeletonClipping_clipTriangles(clipper, world_verts.ptrw(), verties_count, triangles, triangles_count, uvs, 2);
+			if (clipper->clippedTriangles->size == 0){
+				spSkeletonClipping_clipEnd(clipper, slot);
+				continue;
+			}
+			batcher.add(texture, clipper->clippedVertices->items,
+								 clipper->clippedUVs->items,
+								 clipper->clippedVertices->size,
+								 clipper->clippedTriangles->items,
+								 clipper->clippedTriangles->size,
+								 &color, flip_x, flip_y, (slot->data->index)*individual_textures);
+		} else if (is_fx) {
+			//fx_batcher.add(texture, world_verts.ptr(), uvs, verties_count, triangles, triangles_count, &color, flip_x, flip_y, (slot->data->index)*individual_textures);
+		} else {
+			batcher.add(texture, world_verts.ptr(), uvs, verties_count, triangles, triangles_count, &color, flip_x, flip_y, (slot->data->index)*individual_textures);
+		}
+		spSkeletonClipping_clipEnd(clipper, slot);
+	}
+
+
+	spSkeletonClipping_clipEnd2(clipper);
+	batcher.build();
+	update();
+}
+
 void Spine::_animation_process(float p_delta) {
 	if (!is_inside_tree())
 		return;
@@ -447,7 +457,7 @@ void Spine::_animation_process(float p_delta) {
         c.b = slot->color.b;
         node->call("set_modulate", c);
 	}
-	update();
+	SpineBatchingQueue::get_instance()->push(this);
 	process_delta = 0;
 }
 
@@ -669,10 +679,10 @@ void Spine::_notification(int p_what) {
 		case NOTIFICATION_READY: {
 
 			// add fx node as child
-			fx_node->connect("draw", this, "_on_fx_draw");
-			fx_node->set_z_index(1);
-			fx_node->set_z_as_relative(false);
-			add_child(fx_node);
+			//fx_node->connect("draw", this, "_on_fx_draw");
+			//fx_node->set_z_index(1);
+			//fx_node->set_z_as_relative(false);
+			//add_child(fx_node);
 
 			if (!Engine::get_singleton()->is_editor_hint() && has_animation(autoplay)) {
 				play(autoplay);
@@ -1474,9 +1484,7 @@ void Spine::_update_verties_count() {
 	}
 }
 
-Spine::Spine()
-	: batcher(this), fx_node(memnew(Node2D)), fx_batcher(fx_node) {
-
+Spine::Spine() : batcher(this) {
 	skeleton = NULL;
 	root_bone = NULL;
 	clipper = NULL;
