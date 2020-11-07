@@ -174,15 +174,6 @@ void SpineBatcher::add_set_blender_mode(bool p_mode) {
 
 void SpineBatcher::build() {
 	push_command();
-	mut->lock();
-	// cleanup previously built list
-	for (List<SpineBatchCommand *>::Element *E = built_list.front(); E; E = E->next()) {
-		SpineCommandPool::get_instance()->release(E->get());
-	}
-	built_list.clear();
-	mut->unlock();
-
-
 	List<SpineBatchCommand *> building_list;
 	for (List<SpineBatchCommand *>::Element *E = element_list.front(); E; E = E->next()) {
 
@@ -193,6 +184,11 @@ void SpineBatcher::build() {
 	element_list.clear();
 
 	mut->lock();
+	// cleanup previously built list
+	for (List<SpineBatchCommand *>::Element *E = built_list.front(); E; E = E->next()) {
+		SpineCommandPool::get_instance()->release(E->get());
+	}
+	built_list.clear();
 	for (List<SpineBatchCommand *>::Element *E = building_list.front(); E; E = E->next()) {
 		built_list.push_back(E->get());
 	}
