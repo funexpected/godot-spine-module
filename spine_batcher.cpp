@@ -145,24 +145,39 @@ void SpineBatcher::add_set_blender_mode(bool p_mode) {
 void SpineBatcher::build() {
 	push_elements();
 
+	List<Command *> building_list;
 	for (List<Command *>::Element *E = element_list.front(); E; E = E->next()) {
 
 		Command *e = E->get();
 		e->build();
-		built_list.push_back(e);
+		building_list.push_back(e);
 	}
 	element_list.clear();
+
+	mut->lock();
+	for (List<Command *>::Element *E = building_list.front(); E; E = E->next()) {
+		built_list.push_back(E->get());
+	}
+	mut->unlock();
 }
 
 void SpineBatcher::draw() {
-	RID ci = owner->get_canvas_item();
-	for (List<Command *>::Element *E = built_list.front(); E; E = E->next()) {
+	// cleanup previous drawing first
+	for (List<Command *>::Element *E = drawed_list.front(); E; E = E->next()) {
+		Command *e = E->get();
+		memdelete(e);
+	}
+	drawed_list.clear();
 
+	RID ci = owner->get_canvas_item();
+	mut->lock();
+	for (List<Command *>::Element *E = built_list.front(); E; E = E->next()) {
 		Command *e = E->get();
 		e->draw(ci);
 		drawed_list.push_back(e);
 	}
 	built_list.clear();
+	mut->unlock();
 
 }
 
@@ -175,20 +190,10 @@ void SpineBatcher::push_elements() {
 	elements = memnew(Elements);
 }
 
-void SpineBatcher::reset() {
-
-	for (List<Command *>::Element *E = drawed_list.front(); E; E = E->next()) {
-
-		Command *e = E->get();
-		
-		memdelete(e);
-	}
-	drawed_list.clear();
-}
-
 SpineBatcher::SpineBatcher(Node2D *owner) : owner(owner) {
 
 	elements = memnew(Elements);
+	mut = Mutex::create();
 }
 
 SpineBatcher::~SpineBatcher() {

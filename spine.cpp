@@ -93,6 +93,16 @@ void Spine::_on_animation_state_event(int p_track, spEventType p_type, spEvent *
 	}
 }
 
+void Spine::lock() {
+	if (mut)
+		mut->lock();
+}
+
+void Spine::unlock() {
+	if (mut)
+		mut->unlock();
+}
+
 void Spine::_spine_dispose() {
 
 	if (playing) {
@@ -152,7 +162,6 @@ void Spine::_on_fx_draw() {
 }
 
 void Spine::_animation_draw() {
-	batcher.reset();
 	batcher.draw();
 
 	// Deaw debug info
@@ -274,6 +283,7 @@ void Spine::_animation_build() {
 	if (skeleton == NULL)
 		return;
 
+	lock();
 	spColor_setFromFloats(&skeleton->color, modulate.r, modulate.g, modulate.b, modulate.a);
 
 	int additive = 0;
@@ -405,6 +415,7 @@ void Spine::_animation_build() {
 
 
 	spSkeletonClipping_clipEnd2(clipper);
+	unlock();
 	batcher.build();
 	update();
 }
@@ -425,9 +436,12 @@ void Spine::_animation_process(float p_delta) {
 		}
 	}
     current_pos += forward ? process_delta : -process_delta;
+
+	lock();
 	spAnimationState_update(state, forward ? process_delta : -process_delta);
 	spAnimationState_apply(state, skeleton);
 	spSkeleton_updateWorldTransform(skeleton);
+	unlock();
 
 	for (AttachmentNodes::Element *E = attachment_nodes.front(); E; E = E->next()) {
 
@@ -1485,6 +1499,7 @@ void Spine::_update_verties_count() {
 }
 
 Spine::Spine() : batcher(this) {
+	mut = Mutex::create();
 	skeleton = NULL;
 	root_bone = NULL;
 	clipper = NULL;

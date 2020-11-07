@@ -76,6 +76,7 @@ public:
 
 private:
 	Ref<SpineResource> res;
+	Mutex *mut;
 
 	spSkeleton* skeleton;
 	spBone* root_bone;
@@ -143,6 +144,8 @@ protected:
 	bool _get(const StringName& p_name, Variant &r_ret) const;
 	void _get_property_list(List<PropertyInfo> *p_list) const;
 	void _notification(int p_what);
+	void lock();
+	void unlock();
 
 	static void _bind_methods();
 

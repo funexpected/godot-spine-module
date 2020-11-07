@@ -38,6 +38,7 @@
 class SpineBatcher {
 
 	Node2D *owner;
+	Mutex *mut;
 
 	enum {
 		CMD_DRAW_ELEMENT,
@@ -86,8 +87,6 @@ public:
 	void push_elements();
 
 public:
-
-	void reset();
 
 	void add(Ref<Texture> p_texture,
 		const float* p_vertices, const float* p_uvs, int p_vertices_count,
