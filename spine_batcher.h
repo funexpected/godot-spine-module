@@ -34,57 +34,53 @@
 
 #include "scene/2d/node_2d.h"
 
+class SpineBatchCommand {
+public:
+	RID mesh;
+	Ref<Texture> texture;
+	int vertices_count;
+	int indies_count;
+	Vector2 *vertices;
+	Color *colors;
+	Vector2 *uvs;
+	int* indies;
+	int pool_idx;
+	SpineBatchCommand();
+	~SpineBatchCommand();
+	void draw(RID ci);
+	void build();
+	void cleanup();
+};
+
+class SpineCommandPool {
+	static SpineCommandPool *instance;
+	List<SpineBatchCommand *> pool;
+	Mutex *mut;
+	int requested;
+	int released;
+public:
+	SpineBatchCommand* request();
+	void release(SpineBatchCommand* cmd);
+	static SpineCommandPool *get_instance();
+};
 
 class SpineBatcher {
 
 	Node2D *owner;
 	Mutex *mut;
 
-	enum {
-		CMD_DRAW_ELEMENT,
-		CMD_SET_BLEND_MODE,
-	};
-
-	struct Command {
-		Command() {}
-		virtual ~Command() {}
-
-		int cmd;
-		virtual void draw(RID ci) {}
-		virtual void build() {}
-	};
-
-	struct SetBlendMode : Command {
-		int mode;
-
-		SetBlendMode(int p_mode);
-		void draw(RID ci);
-	};
 public:
-	struct Elements : Command {
-		RID mesh;
-		Ref<Texture> texture;
-		int vertices_count;
-		int indies_count;
-		Vector2 *vertices;
-		Color *colors;
-		Vector2 *uvs;
-		int* indies;
-		int pool_idx;
 
-		Elements();
-		~Elements();
-		void draw(RID ci);
-		void build();
-	};
 
-	Elements *elements;
+	SpineBatchCommand *current_command;
 
-	List<Command *> element_list;
-	List<Command *> built_list;
-	List<Command *> drawed_list;
+	List<SpineBatchCommand *> element_list;
+	List<SpineBatchCommand *> built_list;
+	List<SpineBatchCommand *> drawed_list;
 
-	void push_elements();
+	//static List<SpineBatchCommand *> used_pool;
+
+	void push_command();
 
 public:
 

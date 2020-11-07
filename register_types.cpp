@@ -193,7 +193,6 @@ public:
 Ref<ResourceFormatLoaderSpine> resource_loader_spine;
 
 void register_spine_types() {
-
 	ClassDB::register_class<Spine>();
 	ClassDB::register_class<Spine::SpineResource>();
 	resource_loader_spine.instance();

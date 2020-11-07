@@ -33,20 +33,43 @@
 #define BATCH_CAPACITY 1024
 
 
-SpineBatcher::SetBlendMode::SetBlendMode(int p_mode) {
+SpineCommandPool* SpineCommandPool::instance = NULL;
 
-	cmd = CMD_SET_BLEND_MODE;
-	mode = p_mode;
+SpineCommandPool* SpineCommandPool::get_instance() {
+	if (SpineCommandPool::instance == NULL) {
+		SpineCommandPool::instance = memnew(SpineCommandPool);
+		SpineCommandPool::instance->mut = Mutex::create();
+		SpineCommandPool::instance->requested = 0;
+		SpineCommandPool::instance->released = 0;
+	};
+	return SpineCommandPool::instance;
 }
 
-void SpineBatcher::SetBlendMode::draw(RID ci) {
-
-	// VisualServer::get_singleton()->canvas_item_add_set_blend_mode(ci, VS::MaterialBlendMode(mode));
+SpineBatchCommand* SpineCommandPool::request() {
+	mut->lock();
+	requested++;
+	if (!pool.size()) {
+		for (int i=0; i<512; i++) {
+			SpineBatchCommand* cmd = memnew(SpineBatchCommand);
+			pool.push_back(cmd);
+		}
+	}
+	SpineBatchCommand* cmd = pool.front()->get();
+	pool.pop_front();
+	mut->unlock();
+	return cmd;
 }
 
-SpineBatcher::Elements::Elements() {
+void SpineCommandPool::release(SpineBatchCommand* cmd){
+	cmd->cleanup();
+	mut->lock();
+	released++;
+	pool.push_back(cmd);
+	mut->unlock();
+}
 
-	cmd = CMD_DRAW_ELEMENT;
+
+SpineBatchCommand::SpineBatchCommand() {
 	vertices = memnew_arr(Vector2, BATCH_CAPACITY);
 	colors = memnew_arr(Color, BATCH_CAPACITY);
 	uvs = memnew_arr(Vector2, BATCH_CAPACITY);
@@ -55,8 +78,15 @@ SpineBatcher::Elements::Elements() {
 	indies_count = 0;
 };
 
-SpineBatcher::Elements::~Elements() {
+void SpineBatchCommand::cleanup() {
+	VisualServer::get_singleton()->free(mesh);
+	mesh = RID();
+	texture = Ref<Texture>();
+	vertices_count = 0;
+	indies_count = 0;
+}
 
+SpineBatchCommand::~SpineBatchCommand() {
 	memdelete_arr(vertices);
 	memdelete_arr(colors);
 	memdelete_arr(uvs);
@@ -66,7 +96,7 @@ SpineBatcher::Elements::~Elements() {
 	//VisualServer::get_singleton()->free(mesh->get_rid());
 }
 
-void SpineBatcher::Elements::draw(RID ci) {
+void SpineBatchCommand::draw(RID ci) {
 	if (!mesh.is_valid()) return;
 	VisualServer::get_singleton()->canvas_item_add_mesh(
 		ci, mesh,
@@ -76,7 +106,7 @@ void SpineBatcher::Elements::draw(RID ci) {
 	);
 }
 
-void SpineBatcher::Elements::build() {
+void SpineBatchCommand::build() {
 	if (mesh.is_valid()) return;
 	mesh = VisualServer::get_singleton()->mesh_create();
 
@@ -115,47 +145,55 @@ void SpineBatcher::add(Ref<Texture> p_texture,
 	const unsigned short* p_indies, int p_indies_count,
 	Color *p_color, bool flip_x, bool flip_y, int index_item) {
 
-	if (p_texture != elements->texture
-		|| elements->vertices_count + (p_vertices_count >> 1) > BATCH_CAPACITY
-		|| elements->indies_count + p_indies_count > BATCH_CAPACITY * 3) {
+	if (p_texture != current_command->texture
+		|| current_command->vertices_count + (p_vertices_count >> 1) > BATCH_CAPACITY
+		|| current_command->indies_count + p_indies_count > BATCH_CAPACITY * 3) {
 
-		push_elements();
-		elements->texture = p_texture;
+		push_command();
+		current_command->texture = p_texture;
 	}
 
-	for (int i = 0; i < p_indies_count; ++i, ++elements->indies_count)
-		elements->indies[elements->indies_count] = p_indies[i] + elements->vertices_count;
+	for (int i = 0; i < p_indies_count; ++i, ++current_command->indies_count)
+		current_command->indies[current_command->indies_count] = p_indies[i] + current_command->vertices_count;
 
-	for (int i = 0; i < p_vertices_count; i += 2, ++elements->vertices_count) {
+	for (int i = 0; i < p_vertices_count; i += 2, ++current_command->vertices_count) {
 
-		elements->vertices[elements->vertices_count].x = flip_x ? -p_vertices[i] : p_vertices[i];
-		elements->vertices[elements->vertices_count].y = flip_y ? p_vertices[i + 1] : -p_vertices[i + 1];
-		elements->colors[elements->vertices_count] = *p_color;
-		elements->uvs[elements->vertices_count].x = p_uvs[i] + index_item;
-		elements->uvs[elements->vertices_count].y = p_uvs[i + 1];
+		current_command->vertices[current_command->vertices_count].x = flip_x ? -p_vertices[i] : p_vertices[i];
+		current_command->vertices[current_command->vertices_count].y = flip_y ? p_vertices[i + 1] : -p_vertices[i + 1];
+		current_command->colors[current_command->vertices_count] = *p_color;
+		current_command->uvs[current_command->vertices_count].x = p_uvs[i] + index_item;
+		current_command->uvs[current_command->vertices_count].y = p_uvs[i + 1];
 	}
 }
 
 void SpineBatcher::add_set_blender_mode(bool p_mode) {
 
-	push_elements();
-	element_list.push_back(memnew(SetBlendMode(p_mode)));
+	//push_command();
+	//element_list.push_back(memnew(SetBlendMode(p_mode)));
 }
 
 void SpineBatcher::build() {
-	push_elements();
+	push_command();
+	mut->lock();
+	// cleanup previously built list
+	for (List<SpineBatchCommand *>::Element *E = built_list.front(); E; E = E->next()) {
+		SpineCommandPool::get_instance()->release(E->get());
+	}
+	built_list.clear();
+	mut->unlock();
 
-	List<Command *> building_list;
-	for (List<Command *>::Element *E = element_list.front(); E; E = E->next()) {
 
-		Command *e = E->get();
+	List<SpineBatchCommand *> building_list;
+	for (List<SpineBatchCommand *>::Element *E = element_list.front(); E; E = E->next()) {
+
+		SpineBatchCommand *e = E->get();
 		e->build();
 		building_list.push_back(e);
 	}
 	element_list.clear();
 
 	mut->lock();
-	for (List<Command *>::Element *E = building_list.front(); E; E = E->next()) {
+	for (List<SpineBatchCommand *>::Element *E = building_list.front(); E; E = E->next()) {
 		built_list.push_back(E->get());
 	}
 	mut->unlock();
@@ -163,16 +201,17 @@ void SpineBatcher::build() {
 
 void SpineBatcher::draw() {
 	// cleanup previous drawing first
-	for (List<Command *>::Element *E = drawed_list.front(); E; E = E->next()) {
-		Command *e = E->get();
-		memdelete(e);
+	for (List<SpineBatchCommand *>::Element *E = drawed_list.front(); E; E = E->next()) {
+		SpineBatchCommand *e = E->get();
+		//memdelete(e);
+		SpineCommandPool::get_instance()->release(e);
 	}
 	drawed_list.clear();
 
 	RID ci = owner->get_canvas_item();
 	mut->lock();
-	for (List<Command *>::Element *E = built_list.front(); E; E = E->next()) {
-		Command *e = E->get();
+	for (List<SpineBatchCommand *>::Element *E = built_list.front(); E; E = E->next()) {
+		SpineBatchCommand *e = E->get();
 		e->draw(ci);
 		drawed_list.push_back(e);
 	}
@@ -181,45 +220,50 @@ void SpineBatcher::draw() {
 
 }
 
-void SpineBatcher::push_elements() {
+void SpineBatcher::push_command() {
 
-	if (elements->vertices_count <= 0 || elements->indies_count <= 0)
+	if (current_command->vertices_count <= 0 || current_command->indies_count <= 0)
 		return;
 
-	element_list.push_back(elements);
-	elements = memnew(Elements);
+	element_list.push_back(current_command);
+	//elements = memnew(Elements);
+	current_command = SpineCommandPool::get_instance()->request();
 }
 
 SpineBatcher::SpineBatcher(Node2D *owner) : owner(owner) {
 
-	elements = memnew(Elements);
+	current_command = SpineCommandPool::get_instance()->request();
 	mut = Mutex::create();
 }
 
 SpineBatcher::~SpineBatcher() {
 
-	for (List<Command *>::Element *E = element_list.front(); E; E = E->next()) {
+	for (List<SpineBatchCommand *>::Element *E = element_list.front(); E; E = E->next()) {
 
-		Command *e = E->get();
+		SpineBatchCommand *e = E->get();
 		//memdelete(e);
-		memdelete(e);
+		SpineCommandPool::get_instance()->release(e);
+		//memdelete(e);
 	}
 	element_list.clear();
 
-	for (List<Command *>::Element *E = built_list.front(); E; E = E->next()) {
+	for (List<SpineBatchCommand *>::Element *E = built_list.front(); E; E = E->next()) {
 
-		Command *e = E->get();
-		memdelete(e);
+		SpineBatchCommand *e = E->get();
+		SpineCommandPool::get_instance()->release(e);
+		//memdelete(e);
 	}
 	built_list.clear();
 
-	for (List<Command *>::Element *E = drawed_list.front(); E; E = E->next()) {
+	for (List<SpineBatchCommand *>::Element *E = drawed_list.front(); E; E = E->next()) {
 
-		Command *e = E->get();
-		memdelete(e);
+		SpineBatchCommand *e = E->get();
+		//memdelete(e);
+		SpineCommandPool::get_instance()->release(e);
 	}
 	drawed_list.clear();
-	memdelete(elements);
+	SpineCommandPool::get_instance()->release(current_command);
+	//memdelete(elements);
 
 }
 
