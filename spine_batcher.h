@@ -33,6 +33,7 @@
 #define SPINE_BATCHER_H
 
 #include "scene/2d/node_2d.h"
+#include "smartptr.h" 
 
 class SpineBatchCommand {
 public:
@@ -55,7 +56,7 @@ public:
 class SpineCommandPool {
 	static SpineCommandPool *instance;
 	List<SpineBatchCommand *> pool;
-	Mutex *mut;
+	SmartPtr<Mutex> mut;
 	int requested;
 	int released;
 public:
@@ -67,7 +68,7 @@ public:
 class SpineBatcher {
 
 	Node2D *owner;
-	Mutex *mut;
+	SmartPtr<Mutex> mut;
 
 public:
 

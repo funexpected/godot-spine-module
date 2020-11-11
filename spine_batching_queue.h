@@ -5,18 +5,19 @@
 
 #include "spine.h"
 #include "core/os/semaphore.h"
+#include "smartptr.h"
 
 class Spine;
 
 class SpineBatchingQueue {
 
-    Semaphore *sem;
-    Mutex *mut;
+    SmartPtr<Semaphore> sem;
+    SmartPtr<Mutex> mut;
 	static SpineBatchingQueue *instance;
 
 	List<Spine *> queue;
 	bool exit_thread;
-	Thread *thread;
+	SmartPtr<Thread> thread;
 
 public:
 	static void thread_func(void *userdata);

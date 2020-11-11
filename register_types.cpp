@@ -87,7 +87,7 @@ char* _spUtil_readFile(const char* p_path, int* p_length) {
 	*p_length = f->get_len();
 
 	char *data = (char *)_spMalloc(*p_length, __FILE__, __LINE__);
-	data = (char *)_spMalloc(*p_length, __FILE__, __LINE__);
+	//data = (char *)_spMalloc(*p_length, __FILE__, __LINE__);
 	ERR_FAIL_COND_V(data == NULL, NULL);
 
 	f->get_buffer((uint8_t *)data, *p_length);

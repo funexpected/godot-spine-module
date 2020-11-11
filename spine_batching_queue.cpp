@@ -26,10 +26,10 @@ void SpineBatchingQueue::thread_func(void *userdata) {
 	SpineBatchingQueue *sbq = (SpineBatchingQueue*)userdata;
 	
 	while (!sbq->exit_thread) {
-		Spine *node = sbq->pop();
-		if (node == NULL) return;
+//		Spine *node = sbq->pop();
+//		if (node == NULL) return;
 
-		node->_animation_build();
+		//node->_animation_build();
 	}
 }
 
@@ -42,10 +42,11 @@ SpineBatchingQueue* SpineBatchingQueue::get_instance() {
 }
 
 void SpineBatchingQueue::finish() {
-	if (!thread) return;
-	exit_thread = true;
-	Thread::wait_to_finish(thread);
-	thread = NULL;
+
+	if (thread) {
+		exit_thread = true;
+		Thread::wait_to_finish(thread);
+	}
 
 }
 

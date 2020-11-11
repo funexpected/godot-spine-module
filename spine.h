@@ -36,6 +36,7 @@
 #include <spine/spine.h>
 #include "spine_batcher.h"
 #include "core/array.h"
+#include "smartptr.h"
 
 class CollisionObject2D;
 
@@ -76,7 +77,7 @@ public:
 
 private:
 	Ref<SpineResource> res;
-	Mutex *mut;
+	SmartPtr<Mutex> mut;
 
 	spSkeleton* skeleton;
 	spBone* root_bone;
