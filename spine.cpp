@@ -69,6 +69,22 @@ void Spine::spine_animation_callback(spAnimationState *p_state, spEventType p_ty
 	((Spine *)p_state->rendererObject)->_on_animation_state_event(p_track->trackIndex, p_type, p_event, 1);
 }
 
+String Spine::build_state_hash() {
+	if (!state) return "";
+	PoolStringArray items;
+	for (int i=0; i < state->tracksCount; i++) {
+		spTrackEntry* track = state->tracks[i];
+		if (!track || !track->animation) continue;
+
+		items.push_back(track->animation->name);
+		items.push_back(track->loop ?
+			String::num(FMOD(track->trackTime, track->animation->duration), 3) :
+			String::num(MIN(track->trackTime, track->animation->duration), 3)
+		);
+	}
+	return items.join("::");
+}
+
 void Spine::_on_animation_state_event(int p_track, spEventType p_type, spEvent *p_event, int p_loop_count) {
 
 	switch (p_type) {
@@ -151,7 +167,6 @@ void Spine::_on_fx_draw() {
 }
 
 void Spine::_animation_draw() {
-
 	if (skeleton == NULL)
 		return;
 
@@ -415,7 +430,17 @@ void Spine::_animation_process(float p_delta) {
 		}
 	}
     current_pos += forward ? process_delta : -process_delta;
+
 	spAnimationState_update(state, forward ? process_delta : -process_delta);
+
+	// Calculate and draw mesh only if timelines has been changed
+	String current_state_hash = build_state_hash();
+	if (current_state_hash == state_hash) {
+		return;
+	} else {
+		state_hash = current_state_hash;
+	}
+
 	spAnimationState_apply(state, skeleton);
 	spSkeleton_updateWorldTransform(skeleton);
 
@@ -1505,6 +1530,7 @@ Spine::Spine()
 	current_animation = "[stop]";
 	loop = true;
 	fx_slot_prefix = String("fx/").utf8();
+	state_hash = "";
 
 	modulate = Color(1, 1, 1, 1);
 	flip_x = false;

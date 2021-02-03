@@ -112,6 +112,7 @@ private:
 	CharString fx_slot_prefix;
 
 	float current_pos;
+	String state_hash;
 
 	typedef struct AttachmentNode {
 		List<AttachmentNode>::Element *E;
@@ -133,6 +134,7 @@ private:
 	void _set_process(bool p_process, bool p_force = false);
 	void _on_fx_draw();
 	void _update_verties_count();
+	String build_state_hash();
 
 protected:
 	static Array *invalid_names;
