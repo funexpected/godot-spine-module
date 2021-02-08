@@ -100,6 +100,8 @@ private:
 	String current_animation;
 	bool loop;
 	String skin;
+	int performance_triangles_drawn;
+	int performance_triangles_generated;
 
 	Color modulate;
 	bool flip_x, flip_y;

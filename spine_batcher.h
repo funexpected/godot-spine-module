@@ -38,28 +38,13 @@ class SpineBatcher {
 
 	Node2D *owner;
 
-	enum {
-		CMD_DRAW_ELEMENT,
-		CMD_SET_BLEND_MODE,
-	};
 
-	struct Command {
-		Command() {}
-		virtual ~Command() {}
+	struct DrawCommand {
+		DrawCommand();
+		~DrawCommand();
 
-		int cmd;
-		virtual void draw(RID ci) {}
-	};
-
-	struct SetBlendMode : Command {
-		int mode;
-
-		SetBlendMode(int p_mode);
-		void draw(RID ci);
-	};
-public:
-	struct Elements : Command {
 		Ref<Texture> texture;
+		RID mesh;
 		int vertices_count;
 		int indies_count;
 		Vector2 *vertices;
@@ -68,17 +53,17 @@ public:
 		int* indies;
 		int pool_idx;
 
-		Elements();
-		~Elements();
 		void draw(RID ci);
 	};
 
-	Elements *elements;
+	DrawCommand *command;
 
-	List<Command *> element_list;
-	List<Command *> drawed_list;
+	List<DrawCommand *> command_list;
+	List<DrawCommand *> drawed_list;
+	List<RID> meshes;
 
-	void push_elements();
+	void push_command();
+	SpineBatcher::DrawCommand* create_command();
 
 public:
 
@@ -89,9 +74,9 @@ public:
 		const unsigned short* p_indies, int p_indies_count,
 		Color *p_color, bool flip_x, bool flip_y, int index_item = 0);
 
-	void add_set_blender_mode(bool p_mode);
 
 	void flush();
+	int triangles_count();
 
 	SpineBatcher(Node2D *owner);
 	~SpineBatcher();

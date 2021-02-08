@@ -302,6 +302,7 @@ void Spine::_animation_draw() {
 
 
 	spSkeletonClipping_clipEnd2(clipper);
+	performance_triangles_drawn = performance_triangles_generated = batcher.triangles_count();
 	batcher.flush();
 	fx_node->update();
 
@@ -415,6 +416,7 @@ void Spine::_animation_draw() {
 }
 
 void Spine::_animation_process(float p_delta) {
+	performance_triangles_generated = 0;
 	if (!is_inside_tree())
 		return;
 	if (speed_scale == 0)
@@ -432,6 +434,9 @@ void Spine::_animation_process(float p_delta) {
     current_pos += forward ? process_delta : -process_delta;
 
 	spAnimationState_update(state, forward ? process_delta : -process_delta);
+	spAnimationState_apply(state, skeleton);
+	spSkeleton_updateWorldTransform(skeleton);
+	process_delta = 0;
 
 	// Calculate and draw mesh only if timelines has been changed
 	String current_state_hash = build_state_hash();
@@ -441,8 +446,6 @@ void Spine::_animation_process(float p_delta) {
 		state_hash = current_state_hash;
 	}
 
-	spAnimationState_apply(state, skeleton);
-	spSkeleton_updateWorldTransform(skeleton);
 
 	for (AttachmentNodes::Element *E = attachment_nodes.front(); E; E = E->next()) {
 
@@ -473,7 +476,6 @@ void Spine::_animation_process(float p_delta) {
         node->call("set_modulate", c);
 	}
 	update();
-	process_delta = 0;
 }
 
 void Spine::_set_process(bool p_process, bool p_force) {
@@ -606,6 +608,10 @@ bool Spine::_get(const StringName &p_name, Variant &r_ret) const {
 			r_ret = bone->rotation;
 		else if (params[2] == "position")
 			r_ret = Vector2(bone->x, bone->y);
+	} else if (name == "performance/triangles_drawn") {
+		r_ret = performance_triangles_drawn;
+	} else if (name == "performance/triangles_generated") {
+		r_ret = performance_triangles_generated;
 	}
 
 	return true;
@@ -723,6 +729,12 @@ void Spine::_notification(int p_what) {
 
 			_animation_draw();
 		} break;
+
+		case NOTIFICATION_VISIBILITY_CHANGED: {
+			performance_triangles_generated = 0;
+			performance_triangles_drawn = 0;
+		};
+		break;
 	}
 }
 
@@ -1536,6 +1548,9 @@ Spine::Spine()
 	flip_x = false;
 	flip_y = false;
 	individual_textures = false;
+
+	performance_triangles_drawn = 0;
+	performance_triangles_generated = 0;
 }
 
 Spine::~Spine() {

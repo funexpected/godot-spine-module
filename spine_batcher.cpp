@@ -32,77 +32,7 @@
 
 #define BATCH_CAPACITY 1024
 
-Vector< SpineBatcher::Elements* > *spine_elements_pool;
-int spine_elements_pool_last = 0;
-
-SpineBatcher::Elements* spine_get_element(){
-	return memnew(SpineBatcher::Elements);
-	if (spine_elements_pool==NULL){
-		spine_elements_pool = memnew(Vector< SpineBatcher::Elements* >);
-	}
-	if (spine_elements_pool_last==0){
-		for (int i=0; i<spine_elements_pool->size(); i++){
-			spine_elements_pool->get(i)->pool_idx += 1024;
-		}
-		for (int i=0; i<1024; i++){
-			SpineBatcher::Elements *elem = memnew(SpineBatcher::Elements);
-			elem->pool_idx = 1023-i;
-			spine_elements_pool->insert(0, elem);
-		}
-		spine_elements_pool_last = 1024;
-	}
-	spine_elements_pool_last--;
-	return spine_elements_pool->get(spine_elements_pool_last);
-	//SpineBatcher::Elements *elem = spine_elements_pool->get(spine_elements_pool_last);
-	//elem->pool_idx = spine_elements_pool_last;
-	//return elem;
-}
-
-void spine_resume_element(SpineBatcher::Elements *elem){
-	return memdelete(elem);
-	if (!spine_elements_pool->size()) return;
-	int nidx = spine_elements_pool_last;
-	spine_elements_pool_last = nidx+1;
-	if (spine_elements_pool_last == spine_elements_pool->size()){
-		for (int i=0; i<spine_elements_pool->size(); i++){
-			memdelete(spine_elements_pool->get(i));
-		}
-		spine_elements_pool->resize(0);
-		return;
-	}
-	elem->texture = Ref<Texture>();
-	elem->vertices_count = 0;
-	elem->indies_count = 0;
-
-	if (elem->pool_idx == nidx){
-		spine_elements_pool->get(0)->pool_idx = nidx;
-		elem->pool_idx = 0;
-		spine_elements_pool->set(nidx, spine_elements_pool->get(0));
-		spine_elements_pool->set(0, elem);
-		return;
-	}
-
-	SpineBatcher::Elements *used = spine_elements_pool->get(nidx);
-	used->pool_idx = elem->pool_idx;
-	elem->pool_idx = nidx;
-	spine_elements_pool->set(used->pool_idx, used);
-	spine_elements_pool->set(elem->pool_idx, elem);
-}
-
-SpineBatcher::SetBlendMode::SetBlendMode(int p_mode) {
-
-	cmd = CMD_SET_BLEND_MODE;
-	mode = p_mode;
-}
-
-void SpineBatcher::SetBlendMode::draw(RID ci) {
-
-	// VisualServer::get_singleton()->canvas_item_add_set_blend_mode(ci, VS::MaterialBlendMode(mode));
-}
-
-SpineBatcher::Elements::Elements() {
-
-	cmd = CMD_DRAW_ELEMENT;
+SpineBatcher::DrawCommand::DrawCommand() {
 	vertices = memnew_arr(Vector2, BATCH_CAPACITY);
 	colors = memnew_arr(Color, BATCH_CAPACITY);
 	uvs = memnew_arr(Vector2, BATCH_CAPACITY);
@@ -111,15 +41,15 @@ SpineBatcher::Elements::Elements() {
 	indies_count = 0;
 };
 
-SpineBatcher::Elements::~Elements() {
-
+SpineBatcher::DrawCommand::~DrawCommand() {
 	memdelete_arr(vertices);
 	memdelete_arr(colors);
 	memdelete_arr(uvs);
 	memdelete_arr(indies);
 }
 
-void SpineBatcher::Elements::draw(RID ci) {
+void SpineBatcher::DrawCommand::draw(RID ci) {
+	VisualServer::get_singleton()->mesh_clear(mesh);
 
 	Vector<int> p_indices;
 	p_indices.resize(indies_count);
@@ -137,113 +67,125 @@ void SpineBatcher::Elements::draw(RID ci) {
 	p_uvs.resize(vertices_count);
 	memcpy(p_uvs.ptrw(), uvs, vertices_count * sizeof(Vector2));
 
-	VisualServer::get_singleton()->canvas_item_add_triangle_array(ci,
-		p_indices,
-		p_points,
-		p_colors,
-		p_uvs,
-		Vector<int>(),
-		Vector<float>(),
-		texture->get_rid(), -1, RID(),
-		false, false
+	Array arrays;
+	arrays.resize(Mesh::ARRAY_MAX);
+	arrays[Mesh::ARRAY_VERTEX] = p_points;
+	arrays[Mesh::ARRAY_INDEX] = p_indices;
+	arrays[Mesh::ARRAY_COLOR] = p_colors;
+	arrays[Mesh::ARRAY_TEX_UV] = p_uvs;
+	VisualServer::get_singleton()->mesh_add_surface_from_arrays(
+		mesh,
+		VisualServer::PRIMITIVE_TRIANGLES,
+		arrays, Array(),
+		VisualServer::ARRAY_FLAG_USE_2D_VERTICES
 	);
-
+	VisualServer::get_singleton()->canvas_item_add_mesh(ci, mesh, Transform2D(), Color(1,1,1), texture->get_rid());
 }
+
 
 void SpineBatcher::add(Ref<Texture> p_texture,
 	const float* p_vertices, const float* p_uvs, int p_vertices_count,
 	const unsigned short* p_indies, int p_indies_count,
 	Color *p_color, bool flip_x, bool flip_y, int index_item) {
 
-	if (p_texture != elements->texture
-		|| elements->vertices_count + (p_vertices_count >> 1) > BATCH_CAPACITY
-		|| elements->indies_count + p_indies_count > BATCH_CAPACITY * 3) {
+	if (p_texture != command->texture
+		|| command->vertices_count + (p_vertices_count >> 1) > BATCH_CAPACITY
+		|| command->indies_count + p_indies_count > BATCH_CAPACITY * 3) {
 
-		push_elements();
-		elements->texture = p_texture;
+		push_command();
+		command->texture = p_texture;
 	}
 
-	for (int i = 0; i < p_indies_count; ++i, ++elements->indies_count)
-		elements->indies[elements->indies_count] = p_indies[i] + elements->vertices_count;
+	for (int i = 0; i < p_indies_count; ++i, ++command->indies_count)
+		command->indies[command->indies_count] = p_indies[i] + command->vertices_count;
 
-	for (int i = 0; i < p_vertices_count; i += 2, ++elements->vertices_count) {
-
-		elements->vertices[elements->vertices_count].x = flip_x ? -p_vertices[i] : p_vertices[i];
-		elements->vertices[elements->vertices_count].y = flip_y ? p_vertices[i + 1] : -p_vertices[i + 1];
-		elements->colors[elements->vertices_count] = *p_color;
-		elements->uvs[elements->vertices_count].x = p_uvs[i] + index_item;
-		elements->uvs[elements->vertices_count].y = p_uvs[i + 1];
+	for (int i = 0; i < p_vertices_count; i += 2, ++command->vertices_count) {
+		command->vertices[command->vertices_count].x = flip_x ? -p_vertices[i] : p_vertices[i];
+		command->vertices[command->vertices_count].y = flip_y ? p_vertices[i + 1] : -p_vertices[i + 1];
+		command->colors[command->vertices_count] = *p_color;
+		command->uvs[command->vertices_count].x = p_uvs[i] + index_item;
+		command->uvs[command->vertices_count].y = p_uvs[i + 1];
 	}
 }
 
-void SpineBatcher::add_set_blender_mode(bool p_mode) {
-
-	push_elements();
-	element_list.push_back(memnew(SetBlendMode(p_mode)));
+int SpineBatcher::triangles_count() {
+	int count = command->indies_count / 3;
+	for (List<DrawCommand *>::Element *E = command_list.front(); E; E = E->next()) {
+		count += E->get()->indies_count/3;
+	}
+	for (List<DrawCommand*>::Element *E = drawed_list.front(); E; E = E->next()) {
+		count += E->get()->indies_count/3;
+	}
+	return count;
 }
 
 void SpineBatcher::flush() {
 
 	RID ci = owner->get_canvas_item();
-	push_elements();
+	push_command();
 
-	for (List<Command *>::Element *E = element_list.front(); E; E = E->next()) {
-
-		Command *e = E->get();
+	for (List<DrawCommand *>::Element *E = command_list.front(); E; E = E->next()) {
+		DrawCommand *e = E->get();
 		e->draw(ci);
 		drawed_list.push_back(e);
 	}
-	element_list.clear();
+	command_list.clear();
 }
 
-void SpineBatcher::push_elements() {
+void SpineBatcher::push_command() {
 
-	if (elements->vertices_count <= 0 || elements->indies_count <= 0)
+	if (command->vertices_count <= 0 || command->indies_count <= 0)
 		return;
 
-	element_list.push_back(elements);
-	//elements = memnew(Elements);
-	elements = spine_get_element();
+	command_list.push_back(command);
+	command = create_command();
+}
+
+SpineBatcher::DrawCommand* SpineBatcher::create_command() {
+	SpineBatcher::DrawCommand* cmd = memnew(SpineBatcher::DrawCommand);
+	if (meshes.size() <= command_list.size()) {
+		meshes.push_back(VisualServer::get_singleton()->mesh_create());
+	}
+
+	RID mesh = meshes[command_list.size()];
+	cmd->mesh = mesh;
+	return cmd;
 }
 
 void SpineBatcher::reset() {
 
-	for (List<Command *>::Element *E = drawed_list.front(); E; E = E->next()) {
-
-		Command *e = E->get();
-		//memdelete(e);
-		spine_resume_element((Elements*)e);
+	for (List<DrawCommand*>::Element *E = drawed_list.front(); E; E = E->next()) {
+		DrawCommand *e = E->get();
+		memdelete(e);
 	}
 	drawed_list.clear();
 }
 
 SpineBatcher::SpineBatcher(Node2D *owner) : owner(owner) {
-
-	//elements = memnew(Elements);
-	elements = spine_get_element();
-
+	command = create_command();
 }
 
 SpineBatcher::~SpineBatcher() {
 
-	for (List<Command *>::Element *E = element_list.front(); E; E = E->next()) {
+	for (List<DrawCommand *>::Element *E = command_list.front(); E; E = E->next()) {
 
-		Command *e = E->get();
-		//memdelete(e);
-		spine_resume_element((Elements*)e);
+		DrawCommand *e = E->get();
+		memdelete(e);
 	}
-	element_list.clear();
+	command_list.clear();
 
-	for (List<Command *>::Element *E = drawed_list.front(); E; E = E->next()) {
+	for (List<DrawCommand*>::Element *E = drawed_list.front(); E; E = E->next()) {
 
-		Command *e = E->get();
-		//memdelete(e);
-		spine_resume_element((Elements*)e);
+		DrawCommand *e = E->get();
+		memdelete(e);
 	}
 	drawed_list.clear();
 
-	//memdelete(elements);
-	spine_resume_element((Elements*)elements);
+	memdelete(command);
+
+	for (List<RID>::Element *E = meshes.front(); E; E = E->next()) {
+		VisualServer::get_singleton()->free(E->get());
+	}
 }
 
 #endif // MODULE_SPINE_ENABLED
