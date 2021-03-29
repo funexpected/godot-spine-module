@@ -60,7 +60,6 @@ class SpineBatcher {
 
 	List<DrawCommand *> command_list;
 	List<DrawCommand *> drawed_list;
-	List<RID> meshes;
 
 	void push_command();
 	SpineBatcher::DrawCommand* create_command();

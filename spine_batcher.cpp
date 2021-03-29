@@ -39,6 +39,7 @@ SpineBatcher::DrawCommand::DrawCommand() {
 	indies = memnew_arr(int, BATCH_CAPACITY * 3);
 	vertices_count = 0;
 	indies_count = 0;
+	mesh = VisualServer::get_singleton()->mesh_create();
 };
 
 SpineBatcher::DrawCommand::~DrawCommand() {
@@ -46,11 +47,10 @@ SpineBatcher::DrawCommand::~DrawCommand() {
 	memdelete_arr(colors);
 	memdelete_arr(uvs);
 	memdelete_arr(indies);
+	VisualServer::get_singleton()->free(mesh);
 }
 
 void SpineBatcher::DrawCommand::draw(RID ci) {
-	VisualServer::get_singleton()->mesh_clear(mesh);
-
 	Vector<int> p_indices;
 	p_indices.resize(indies_count);
 	memcpy(p_indices.ptrw(), indies, indies_count * sizeof(int) );
@@ -142,18 +142,10 @@ void SpineBatcher::push_command() {
 }
 
 SpineBatcher::DrawCommand* SpineBatcher::create_command() {
-	SpineBatcher::DrawCommand* cmd = memnew(SpineBatcher::DrawCommand);
-	if (meshes.size() <= command_list.size()) {
-		meshes.push_back(VisualServer::get_singleton()->mesh_create());
-	}
-
-	RID mesh = meshes[command_list.size()];
-	cmd->mesh = mesh;
-	return cmd;
+	return memnew(SpineBatcher::DrawCommand);
 }
 
 void SpineBatcher::reset() {
-
 	for (List<DrawCommand*>::Element *E = drawed_list.front(); E; E = E->next()) {
 		DrawCommand *e = E->get();
 		memdelete(e);
@@ -182,10 +174,6 @@ SpineBatcher::~SpineBatcher() {
 	drawed_list.clear();
 
 	memdelete(command);
-
-	for (List<RID>::Element *E = meshes.front(); E; E = E->next()) {
-		VisualServer::get_singleton()->free(E->get());
-	}
 }
 
 #endif // MODULE_SPINE_ENABLED
