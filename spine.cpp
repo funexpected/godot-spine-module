@@ -415,7 +415,14 @@ void Spine::_animation_draw() {
 	}
 }
 
+void Spine::queue_process() {
+	if (process_queued) return;
+	process_queued = true;
+	call_deferred("_animation_process", 0.0);
+}
+
 void Spine::_animation_process(float p_delta) {
+	process_queued = false;
 	performance_triangles_generated = 0;
 	if (!is_inside_tree())
 		return;
@@ -825,6 +832,16 @@ bool Spine::play(const String &p_name, real_t p_cunstom_scale, bool p_loop, int 
 	return true;
 }
 
+void Spine::set_animation_state(int p_track, String p_animation, float p_pos) {
+	ERR_FAIL_COND(skeleton == NULL);
+	spAnimation *animation = spSkeletonData_findAnimation(skeleton->data, p_animation.utf8().get_data());
+	ERR_FAIL_COND(animation == NULL);
+	spTrackEntry *entry = spAnimationState_setAnimation(state, p_track, animation, false);
+	if (entry == NULL) return;
+	entry->trackTime = p_pos;
+	queue_process();
+}
+
 bool Spine::add(const String &p_name, real_t p_cunstom_scale, bool p_loop, int p_track, int p_delay) {
 
 	ERR_FAIL_COND_V(skeleton == NULL, false);
@@ -914,7 +931,7 @@ void Spine::seek(int track, float p_pos) {
 	spTrackEntry *entry = spAnimationState_getCurrent(state, track);
 	if (entry == NULL) return;
 	entry->trackTime = p_pos;
-	//_animation_process(p_pos - current_pos);
+	// if (!processing) _animation_process(0.0);
 }
 
 float Spine::tell(int track) const {
@@ -1414,6 +1431,7 @@ void Spine::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("is_debug_attachment", "mode"), &Spine::is_debug_attachment);
 
 	ClassDB::bind_method(D_METHOD("_on_fx_draw"), &Spine::_on_fx_draw);
+	ClassDB::bind_method(D_METHOD("_animation_process"), &Spine::_animation_process);
 
 	ADD_PROPERTY(PropertyInfo(Variant::INT, "process_mode", PROPERTY_HINT_ENUM, "Fixed,Idle"), "set_animation_process_mode", "get_animation_process_mode");
 	ADD_PROPERTY(PropertyInfo(Variant::REAL, "speed", PROPERTY_HINT_RANGE, "-64,64,0.01"), "set_speed", "get_speed");
@@ -1543,6 +1561,7 @@ Spine::Spine()
 	loop = true;
 	fx_slot_prefix = String("fx/").utf8();
 	state_hash = "";
+	process_queued = false;
 
 	modulate = Color(1, 1, 1, 1);
 	flip_x = false;

@@ -37,6 +37,7 @@
 #include <spine/spine.h>
 #include "include/spine/Atlas.h"
 #include "spine.h"
+#include "animation_node_spine.h"
 
 #include "core/os/file_access.h"
 #include "core/os/os.h"
@@ -195,6 +196,8 @@ void register_spine_types() {
 
 	ClassDB::register_class<Spine>();
 	ClassDB::register_class<Spine::SpineResource>();
+	ClassDB::register_class<SpineMachine>();
+	ClassDB::register_class<AnimationNodeSpineAnimation>();
 	resource_loader_spine.instance();
 	ResourceLoader::add_resource_format_loader(resource_loader_spine);
 

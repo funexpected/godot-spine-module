@@ -115,6 +115,7 @@ private:
 
 	float current_pos;
 	String state_hash;
+	bool process_queued;
 
 	typedef struct AttachmentNode {
 		List<AttachmentNode>::Element *E;
@@ -175,6 +176,8 @@ public:
 	void reset();
 	void seek(int track, float p_pos);
 	float tell(int track) const;
+	void set_animation_state(int track, String p_animation, float p_pos);
+	void queue_process();
 
 	void set_active(bool p_active);
 	bool is_active() const;
