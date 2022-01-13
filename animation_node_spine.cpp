@@ -205,7 +205,12 @@ float AnimationNodeSpineAnimation::process(float p_time, bool p_seek) {
     if (time > anim_size) {
         time = anim_size;
     }
-    sp->set_animation_state(track, animation, time);
+	if (p_seek) {
+        sp->set_animation_state(track, animation, time);
+    } else {
+        sp->seek(track, time);
+        sp->queue_process();
+    }
 	set_parameter(this->time, time);
 	return anim_size - time;
 }
