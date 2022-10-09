@@ -1,14 +1,110 @@
-﻿Import('env')
+﻿from spine_versions import spine_versions
+
+def prepare_spine_sources(version: str):
+	print("Fetching spine %s sources..." % version)
+	import zipfile
+	import urllib.request
+	import os
+	import shutil
+	import hashlib
+	underscored_version = version.replace(".", "_")
+	sha = spine_versions[version]
+	current_file = (lambda x:x).__code__.co_filename
+	content_hash = "%s:%s" % (
+		sha,
+		hashlib.md5(open(current_file, 'rb').read()).hexdigest()
+	)
+	download_url = "https://github.com/EsotericSoftware/spine-runtimes/archive/%s.zip" % sha
+	zipped_path = "runtime.%s.zip" % sha
+	unzipped_path = "runtime.%s" % sha
+	version_path = "runtime/spine_%s/version.txt" % underscored_version
+	if os.path.exists(version_path) and open(version_path, 'r').read() == content_hash:
+		return
+	urllib.request.urlretrieve(download_url, zipped_path)
+	with zipfile.ZipFile(zipped_path, 'r') as zip_ref:
+		zip_ref.extractall(unzipped_path)
+	
+	for suffix in ["include", "src"]:
+		path = unzipped_path + "/spine-runtimes-%s/spine-cpp/spine-cpp/%s" % (sha, suffix)
+		runtime_path = "runtime/spine_%s/%s" % (underscored_version, suffix)
+		if version == "3.6":
+			path = unzipped_path + "/spine-runtimes-%s/spine-c/spine-c/%s" % (sha, suffix)
+		for file in os.listdir(path + '/spine'):
+			if not (file.endswith(".h") or file.endswith(".cpp") or file.endswith(".c")):
+				continue
+			if version != "3.6":
+				content = open(path + "/spine/" + file, "r").read()
+				content = content.replace("using namespace spine;", "using namespace spine_%s;" % underscored_version)
+				content = content.replace("namespace spine {", "namespace spine_%s {" % underscored_version)
+				content = content.replace("spine::", "spine_%s::" % underscored_version)
+				if file == "Atlas.cpp":
+					content = content.replace(
+						"int indexOf(const char **array, int count, SimpleString *str) {",
+						"static int indexOf(const char **array, int count, SimpleString *str) {"
+					)
+				open(path + "/spine/" + file, "w").write(content)
+		if os.path.exists(runtime_path + '/spine'):
+			for file in os.listdir(runtime_path + '/spine'):
+				if file.endswith(".h") or file.endswith(".cpp") or file.endswith(".c"):
+					os.remove(runtime_path + "/spine/" + file)
+		shutil.copytree(path, runtime_path, dirs_exist_ok=True)
+	open(version_path, 'w').write(content_hash)
+	shutil.rmtree(unzipped_path)
+	os.remove(zipped_path)
+
+
+Import('env')
 Import('env_modules')
 
-env_modules.add_source_files(env.modules_sources,"src/spine/*.c")
-env_modules.add_source_files(env.modules_sources,"*.cpp")
+env_spine = env_modules.Clone()
+env_spine.add_source_files(env.modules_sources,"*.cpp")
+env_spine.add_source_files(env.modules_sources, "runtime/spine_runtime.cpp")
 
-env_modules.Append(CPPFLAGS=[
-	"-I", "modules/spine/include",
-])
+# env_modules.Append(CPPFLAGS=[
+# 	"-I", "modules/spine/include",
+# 	"-I", "modules/spine"
+# ])
 
+
+for version in spine_versions.keys():
+	underscored_version = version.replace(".", "_")
+	if not env["spine_runtime_%s" % underscored_version]:
+		continue
+
+	prepare_spine_sources(version)
+	env_spine_runtime = env.Clone()
+	env_spine_runtime.Append(CPPFLAGS=[
+		"-I", "modules/spine",
+		"-I", "modules/spine/runtime",
+		"-I", "modules/spine/runtime/spine_%s" % underscored_version,
+		"-I", "modules/spine/runtime/spine_%s/include" % underscored_version
+	])
+	env_spine.Append(CPPDEFINES=["SPINE_RUNTIME_%s_ENABLED" % underscored_version])
+	env_spine_runtime.Append(CPPDEFINES=["SPINE_RUNTIME_%s_ENABLED" % underscored_version])
+
+	sources = []
+	env_spine_runtime.add_source_files(sources,"runtime/spine_%s/src/spine/*.cpp" % underscored_version)
+	env_spine_runtime.add_source_files(sources,"runtime/spine_%s/src/spine/*.c" % underscored_version)
+	env_spine_runtime.add_source_files(sources, "runtime/spine_%s/runtime.cpp" % underscored_version)
+	# env_spine_runtime.Append(CFLAGS=['-fvisibility=hidden', '-fPIC'])
+	# env_spine_runtime.Append(LINKFLAGS=['-Wl,--exclude-libs=ALL'])
+
+
+	# Build it all as a library
+	lib = env_spine_runtime.add_library("spine_%s" % underscored_version, sources)
+	env.Prepend(LIBS=[lib])
+
+Export('env_spine')
 Export('env_modules')
 Export('env')
 
+# SConscript("runtime/spine_3_6/SCsub")
+# SConscript("runtime/spine_3_7/SCsub")
+# SConscript("runtime/spine_3_8/SCsub")
+# SConscript("runtime/spine_4_1/SCsub")
 
+
+
+
+
+	

@@ -33,9 +33,6 @@
 #include <core/project_settings.h>
 #include "register_types.h"
 
-#include <spine/extension.h>
-#include <spine/spine.h>
-#include "include/spine/Atlas.h"
 #include "spine.h"
 #include "animation_node_spine.h"
 
@@ -47,110 +44,81 @@
 typedef Ref<Texture> TextureRef;
 typedef Ref<ImageTexture> ImageTextureRef;
 
-void _spAtlasPage_createTexture(spAtlasPage* self, const char* path) {
-	TextureRef *ref = memnew(TextureRef);
-	*ref = ResourceLoader::load(path);
-	if (!ref->is_null()){
-		self->rendererObject = ref;
-		self->width = (*ref)->get_width();
-		self->height = (*ref)->get_height();
-	} else {
-		memdelete(ref);
-		Ref<Image> img = memnew(Image);
-		if (img->load(path) == OK){
-			ImageTextureRef *imgtex = memnew(ImageTextureRef);
-			(*imgtex) = Ref<ImageTexture>(memnew(ImageTexture));
-			(*imgtex)->create_from_image(img);
-			self->rendererObject = imgtex;
-			self->width = (*imgtex)->get_width();
-			self->height = (*imgtex)->get_height();
-		} else {
-			ERR_FAIL();
-		}
+// void _spAtlasPage_createTexture(spAtlasPage* self, const char* path) {
+// 	TextureRef *ref = memnew(TextureRef);
+// 	*ref = ResourceLoader::load(path);
+// 	if (!ref->is_null()){
+// 		self->rendererObject = ref;
+// 		self->width = (*ref)->get_width();
+// 		self->height = (*ref)->get_height();
+// 	} else {
+// 		memdelete(ref);
+// 		Ref<Image> img = memnew(Image);
+// 		if (img->load(path) == OK){
+// 			ImageTextureRef *imgtex = memnew(ImageTextureRef);
+// 			(*imgtex) = Ref<ImageTexture>(memnew(ImageTexture));
+// 			(*imgtex)->create_from_image(img);
+// 			self->rendererObject = imgtex;
+// 			self->width = (*imgtex)->get_width();
+// 			self->height = (*imgtex)->get_height();
+// 		} else {
+// 			ERR_FAIL();
+// 		}
 		
-	}
-}
+// 	}
+// }
 
-void _spAtlasPage_disposeTexture(spAtlasPage* self) {
+// void _spAtlasPage_disposeTexture(spAtlasPage* self) {
 
-	if(TextureRef *ref = static_cast<TextureRef *>(self->rendererObject))
-		memdelete(ref);
-}
+// 	if(TextureRef *ref = static_cast<TextureRef *>(self->rendererObject))
+// 		memdelete(ref);
+// }
 
 
-char* _spUtil_readFile(const char* p_path, int* p_length) {
+// char* _spUtil_readFile(const char* p_path, int* p_length) {
 
-	String str_path = String::utf8(p_path);
-	FileAccess *f = FileAccess::open(p_path, FileAccess::READ);
-	ERR_FAIL_COND_V_MSG(!f, NULL, "Can't read file " + String(p_path));
+// 	String str_path = String::utf8(p_path);
+// 	FileAccess *f = FileAccess::open(p_path, FileAccess::READ);
+// 	ERR_FAIL_COND_V_MSG(!f, NULL, "Can't read file " + String(p_path));
 
-	*p_length = f->get_len();
+// 	*p_length = f->get_len();
 
-	char *data = (char *)_spMalloc(*p_length, __FILE__, __LINE__);
-	data = (char *)_spMalloc(*p_length, __FILE__, __LINE__);
-	ERR_FAIL_COND_V(data == NULL, NULL);
+// 	char *data = (char *)_spMalloc(*p_length, __FILE__, __LINE__);
+// 	data = (char *)_spMalloc(*p_length, __FILE__, __LINE__);
+// 	ERR_FAIL_COND_V(data == NULL, NULL);
 
-	f->get_buffer((uint8_t *)data, *p_length);
+// 	f->get_buffer((uint8_t *)data, *p_length);
 
-	memdelete(f);
-	return data;
-}
+// 	memdelete(f);
+// 	return data;
+// }
 
-static void *spine_malloc(size_t p_size) {
+// static void *spine_malloc(size_t p_size) {
 
-	if (p_size == 0)
-		return NULL;
-	return memalloc(p_size);
-}
+// 	if (p_size == 0)
+// 		return NULL;
+// 	return memalloc(p_size);
+// }
 
-static void *spine_realloc(void *ptr, size_t p_size) {
+// static void *spine_realloc(void *ptr, size_t p_size) {
 
-	if (p_size == 0)
-		return NULL;
-	return memrealloc(ptr, p_size);
-}
+// 	if (p_size == 0)
+// 		return NULL;
+// 	return memrealloc(ptr, p_size);
+// }
 
-static void spine_free(void *ptr) {
+// static void spine_free(void *ptr) {
 
-	if (ptr == NULL)
-		return;
-	memfree(ptr);
-}
+// 	if (ptr == NULL)
+// 		return;
+// 	memfree(ptr);
+// }
 
 class ResourceFormatLoaderSpine : public ResourceFormatLoader {
 public:
 
 	virtual RES load(const String &p_path, const String& p_original_path = "", Error *p_err=NULL) {
-		float start = OS::get_singleton()->get_ticks_msec();
-		Spine::SpineResource *res = memnew(Spine::SpineResource);
-		Ref<Spine::SpineResource> ref(res);
-		String p_atlas = p_path.get_basename() + ".atlas";
-		res->atlas = spAtlas_createFromFile(p_atlas.utf8().get_data(), 0);
-		ERR_FAIL_COND_V(res->atlas == NULL, RES());
-
-		if (p_path.get_extension() == "json"){
-			spSkeletonJson *json = spSkeletonJson_create(res->atlas);
-			ERR_FAIL_COND_V(json == NULL, RES());
-			json->scale = 1;
-
-			res->data = spSkeletonJson_readSkeletonDataFile(json, p_path.utf8().get_data());
-			String err_msg = json->error ? json->error : "";
-			spSkeletonJson_dispose(json);
-			ERR_FAIL_COND_V_MSG(res->data == NULL, RES(), err_msg);
-		} else {
-			spSkeletonBinary* bin  = spSkeletonBinary_create(res->atlas);
-			ERR_FAIL_COND_V(bin == NULL, RES());
-			bin->scale = 1;
-			res->data = spSkeletonBinary_readSkeletonDataFile(bin, p_path.utf8().get_data());
-			String err_msg = bin->error ? bin->error : "";
-			spSkeletonBinary_dispose(bin);
-			ERR_FAIL_COND_V_MSG(res->data == NULL, RES(), err_msg);
-		}
-
-		res->set_path(p_path);
-		float finish = OS::get_singleton()->get_ticks_msec();
-		// print_line("Spine resource (" + p_path + ") loaded in " + itos(finish-start) + " msecs");
-		return ref;
+		return SpineRuntime::load_resource(p_path);
 	}
 
 	virtual void get_recognized_extensions(List<String> *p_extensions) const {
@@ -161,19 +129,19 @@ public:
 
 	virtual void get_dependencies(const String &p_path, List<String> *p_dependencies, bool p_add_types) {
 		print_line("get_dependencies for " + p_path);
-		String base_dir = p_path.get_base_dir();
-		String base_name = p_path.get_basename();
-		String atlas_path = base_name + ".atlas";
-		if (!FileAccess::exists(atlas_path)) return;
-		p_dependencies->push_back(atlas_path);
-		Vector<uint8_t> bytes = FileAccess::get_file_as_array(atlas_path);
-		spAtlas *atlas = spAtlas_create((const char*)bytes.ptr(), bytes.size(), base_dir.utf8(), NULL);
-		spAtlasPage *page = atlas->pages;
-		while (page) {
-			p_dependencies->push_back(base_dir + "/" + page->name);
-			page = page->next;
-		}
-		spAtlas_dispose(atlas);
+		// String base_dir = p_path.get_base_dir();
+		// String base_name = p_path.get_basename();
+		// String atlas_path = base_name + ".atlas";
+		// if (!FileAccess::exists(atlas_path)) return;
+		// p_dependencies->push_back(atlas_path);
+		// Vector<uint8_t> bytes = FileAccess::get_file_as_array(atlas_path);
+		// spAtlas *atlas = spAtlas_create((const char*)bytes.ptr(), bytes.size(), base_dir.utf8(), NULL);
+		// spAtlasPage *page = atlas->pages;
+		// while (page) {
+		// 	p_dependencies->push_back(base_dir + "/" + page->name);
+		// 	page = page->next;
+		// }
+		// spAtlas_dispose(atlas);
 	}
 
 	virtual bool handles_type(const String& p_type) const {
@@ -195,15 +163,13 @@ Ref<ResourceFormatLoaderSpine> resource_loader_spine;
 void register_spine_types() {
 
 	ClassDB::register_class<Spine>();
-	ClassDB::register_class<Spine::SpineResource>();
+	ClassDB::register_class<SpineResource>();
+	// ClassDB::register_class<SpineRuntime_3_6>();
+	// ClassDB::register_class<SpineRuntime_4_1>();
 	ClassDB::register_class<SpineMachine>();
 	ClassDB::register_class<AnimationNodeSpineAnimation>();
 	resource_loader_spine.instance();
 	ResourceLoader::add_resource_format_loader(resource_loader_spine);
-
-	_spSetMalloc(spine_malloc);
-	_spSetRealloc(spine_realloc);
-	_spSetFree(spine_free);
 }
 
 void unregister_spine_types() {

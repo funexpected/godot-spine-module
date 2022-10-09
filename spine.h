@@ -33,8 +33,8 @@
 
 #include "scene/2d/node_2d.h"
 #include "scene/resources/shape_2d.h"
-#include <spine/spine.h>
 #include "spine_batcher.h"
+#include "runtime/spine_runtime.h"
 #include "core/array.h"
 
 class CollisionObject2D;
@@ -59,28 +59,11 @@ public:
 
 	};
 
-	class SpineResource : public Resource {
-
-		GDCLASS(SpineResource, Resource);
-
-
-	public:
-
-		SpineResource();
-		~SpineResource();
-
-		spAtlas *atlas;
-		spSkeletonData *data;
-	};
-
 private:
 	Ref<SpineResource> res;
-
-	spSkeleton* skeleton;
-	spBone* root_bone;
-	spAnimationState* state;
-	spSkeletonClipping *clipper;
-	mutable Vector<float> world_verts;
+	Ref<SpineRuntime> runtime;
+	
+	// mutable Vector<float> world_verts;
 
 	float speed_scale;
 	String autoplay;
@@ -109,35 +92,35 @@ private:
 	SpineBatcher batcher;
 
 	// fx slots (always show on top)
-	Node2D *fx_node;
-	SpineBatcher fx_batcher;
-	CharString fx_slot_prefix;
+	// Node2D *fx_node;
+	// SpineBatcher fx_batcher;
+	// CharString fx_slot_prefix;
 
 	float current_pos;
 	String state_hash;
 	bool process_queued;
 
-	typedef struct AttachmentNode {
-		List<AttachmentNode>::Element *E;
-		spSlot *slot;
-		WeakRef *ref;
-		Vector2 ofs;
-		Vector2 scale;
-		real_t rot;
-	} AttachmentNode;
-	typedef List<AttachmentNode> AttachmentNodes;
-	AttachmentNodes attachment_nodes;
+	// typedef struct AttachmentNode {
+	// 	List<AttachmentNode>::Element *E;
+	// 	spSlot *slot;
+	// 	WeakRef *ref;
+	// 	Vector2 ofs;
+	// 	Vector2 scale;
+	// 	real_t rot;
+	// } AttachmentNode;
+	// typedef List<AttachmentNode> AttachmentNodes;
+	// AttachmentNodes attachment_nodes;
 
-	static void spine_animation_callback(spAnimationState* p_state, spEventType p_type, spTrackEntry* p_track, spEvent* p_event);
-	void _on_animation_state_event(int p_track, spEventType p_type, spEvent *p_event, int p_loop_count);
+	// static void spine_animation_callback(spAnimationState* p_state, spEventType p_type, spTrackEntry* p_track, spEvent* p_event);
+	// void _on_animation_state_event(int p_track, spEventType p_type, spEvent *p_event, int p_loop_count);
 
 	void _spine_dispose();
 	void _animation_process(float p_delta);
 	void _animation_draw();
 	void _set_process(bool p_process, bool p_force = false);
-	void _on_fx_draw();
-	void _update_verties_count();
-	String build_state_hash();
+	// void _on_fx_draw();
+	// void _update_verties_count();
+	// String build_state_hash();
 
 protected:
 	static Array *invalid_names;
@@ -162,7 +145,7 @@ public:
 	void mix(const String& p_from, const String& p_to, real_t p_duration);
 
 	bool play(const String& p_name, real_t p_cunstom_scale = 1.0f, bool p_loop = false, int p_track = 0, float p_delay = 0);
-	bool add(const String& p_name, real_t p_cunstom_scale = 1.0f, bool p_loop = false, int p_track = 0, int p_delay = 0);
+	bool add(const String& p_name, real_t p_cunstom_scale = 1.0f, bool p_loop = false, int p_track = 0, float p_delay = 0);
 	void clear(int p_track = -1);
 	void stop();
 	bool is_playing(int p_track = 0) const;
@@ -227,8 +210,8 @@ public:
 	bool add_bounding_box(const String& p_bone_name, const String& p_slot_name, const String& p_attachment_name, const Variant& p_node, const Vector2& p_ofs = Vector2(0, 0), const Vector2& p_scale = Vector2(1, 1), const real_t p_rot = 0);
 	bool remove_bounding_box(const String& p_bone_name, const Variant& p_node);
 
-	void set_fx_slot_prefix(const String& p_prefix);
-	String get_fx_slot_prefix() const;
+	// void set_fx_slot_prefix(const String& p_prefix);
+	// String get_fx_slot_prefix() const;
 
 	void set_debug_bones(bool p_enable);
 	bool is_debug_bones() const;

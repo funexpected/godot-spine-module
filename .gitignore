@@ -4,3 +4,8 @@
 *.d
 *.pyc
 *.bc
+*.a
+runtime/**/src
+runtime/**/include
+.DS_Store
+version.txt

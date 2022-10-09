@@ -27,8 +27,6 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  *****************************************************************************/
-#ifdef MODULE_SPINE_ENABLED
-
 #ifndef SPINE_BATCHER_H
 #define SPINE_BATCHER_H
 
@@ -82,5 +80,3 @@ public:
 };
 
 #endif // SPINE_BATCHER_H
-
-#endif // MODULE_SPINE_ENABLED
