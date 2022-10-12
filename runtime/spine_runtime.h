@@ -24,6 +24,9 @@ public:
 class SpineRuntime: public Reference {
     GDCLASS(SpineRuntime, Reference);
 
+protected:
+    static void _bind_methods();
+
 public:
     virtual bool _rt_set(const StringName &p_name, const Variant &p_value) { return false; }
 	virtual bool _rt_get(const StringName &p_name, Variant &r_ret) const { return false; }

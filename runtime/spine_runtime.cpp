@@ -114,6 +114,10 @@ Ref<SpineResource> SpineRuntime::load_resource(const String &p_path) {
     return res;
 }
 
+void SpineRuntime::_bind_methods() {
+    ADD_SIGNAL(MethodInfo("event"));
+}
+
 Ref<SpineRuntime> SpineResource::create_runtime() {
 #ifdef SPINE_RUNTIME_3_6_ENABLED    
     if (runtime_version == "3_6") {

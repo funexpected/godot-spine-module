@@ -88,10 +88,10 @@ void _on_animation_state_event(SpineRuntime_3_6* self, int p_track, spEventType 
 
 	switch (p_type) {
 		case SP_ANIMATION_START:
-			self->emit_signal("animation_start", p_track);
+			self->emit_signal("event", "animation_start", p_track);
 			break;
 		case SP_ANIMATION_COMPLETE:
-			self->emit_signal("animation_complete", p_track, p_loop_count);
+			self->emit_signal("event", "animation_complete", p_track, p_loop_count);
 			break;
 		case SP_ANIMATION_EVENT: {
 			Dictionary event;
@@ -99,10 +99,10 @@ void _on_animation_state_event(SpineRuntime_3_6* self, int p_track, spEventType 
 			event["int"] = p_event->intValue;
 			event["float"] = p_event->floatValue;
 			event["string"] = p_event->stringValue ? p_event->stringValue : "";
-			self->emit_signal("animation_event", p_track, event);
+			self->emit_signal("event", "animation_event", p_track, event);
 		} break;
 		case SP_ANIMATION_END:
-			self->emit_signal("animation_end", p_track);
+			self->emit_signal("event", "animation_end", p_track);
 			break;
 	}
 }

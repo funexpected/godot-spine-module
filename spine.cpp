@@ -410,6 +410,7 @@ void Spine::set_resource(Ref<SpineResource> p_data) {
 	}
 	
 	runtime = res->create_runtime();
+	runtime->connect("event", this, "emit_signal");
 
 	// if (res.is_null())
 	// 	return;
