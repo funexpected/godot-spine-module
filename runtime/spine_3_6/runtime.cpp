@@ -16,7 +16,6 @@ typedef Ref<Texture> TextureRef;
 typedef Ref<ImageTexture> ImageTextureRef;
 
 void _spAtlasPage_createTexture(spAtlasPage* self, const char* path) {
-	print_line(String("loading resource ") + path);
 	TextureRef *ref = memnew(TextureRef);
 	*ref = ResourceLoader::load(path);
 	if (!ref->is_null()){
@@ -127,7 +126,6 @@ static Ref<Texture> spine_get_texture(spMeshAttachment *attachment) {
 }
 
 void SpineRuntime_3_6::init() {
-    print_line("Initializing spine 3.6");
     _spSetMalloc(spine_malloc);
 	_spSetRealloc(spine_realloc);
 	_spSetFree(spine_free);

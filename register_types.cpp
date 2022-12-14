@@ -126,7 +126,6 @@ public:
 	}
 
 	virtual void get_dependencies(const String &p_path, List<String> *p_dependencies, bool p_add_types) {
-		print_line("get_dependencies for " + p_path);
 		// String base_dir = p_path.get_base_dir();
 		// String base_name = p_path.get_basename();
 		// String atlas_path = base_name + ".atlas";
