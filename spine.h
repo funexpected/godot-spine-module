@@ -27,7 +27,6 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  *****************************************************************************/
-#ifdef MODULE_SPINE_ENABLED
 #ifndef SPINE_H
 #define SPINE_H
 
@@ -233,4 +232,3 @@ public:
 
 
 #endif // SPINE_H
-#endif // MODULE_SPINE_ENABLED

@@ -70,9 +70,14 @@ sp::SpineExtension* sp::getDefaultExtension() {
 }
 
 class SPINE_TEXTURE_LOADER_CLASS : public sp::TextureLoader {
-	virtual void load(sp::AtlasPage &page, const sp::String &path) {
+	virtual void load(sp::AtlasPage &page, const sp::String &p_path) {
+		String path = p_path.buffer();
+		if (path.begins_with("res:/") && !path.begins_with("res://")) {
+			path = path.replace("res:/", "res://");
+		}
+		print_line(String("loading resource ") + path);
 		Ref<Texture> *ref = memnew(Ref<Texture>);
-		*ref = ResourceLoader::load(path.buffer());
+		*ref = ResourceLoader::load(path);
 		if (!ref->is_null()) {
 			page.setRendererObject(ref);
 			page.width = (*ref)->get_width();
@@ -80,7 +85,7 @@ class SPINE_TEXTURE_LOADER_CLASS : public sp::TextureLoader {
 		} else {
 			memdelete(ref);
 			Ref<Image> img = memnew(Image);
-			if (img->load(path.buffer()) == OK) {
+			if (img->load(path) == OK) {
 				Ref<ImageTexture> *imgtex = memnew(Ref<ImageTexture>);
 				(*imgtex) = Ref<ImageTexture>(memnew(ImageTexture));
 				(*imgtex)->create_from_image(img);

@@ -27,8 +27,6 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  *****************************************************************************/
-#ifdef MODULE_SPINE_ENABLED
-
 #include "spine.h"
 #include "core/io/resource_loader.h"
 #include <core/engine.h>
@@ -1104,5 +1102,3 @@ Spine::~Spine() {
 	// cleanup
 	_spine_dispose();
 }
-
-#endif // MODULE_SPINE_ENABLED

@@ -27,8 +27,6 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  *****************************************************************************/
-#ifdef MODULE_SPINE_ENABLED
-
 #include <core/class_db.h>
 #include <core/project_settings.h>
 #include "register_types.h"
@@ -166,8 +164,10 @@ void register_spine_types() {
 	ClassDB::register_class<SpineResource>();
 	// ClassDB::register_class<SpineRuntime_3_6>();
 	// ClassDB::register_class<SpineRuntime_4_1>();
+#ifdef MODULE_SPINE_WITH_ANIMATION_NODES
 	ClassDB::register_class<SpineMachine>();
 	ClassDB::register_class<AnimationNodeSpineAnimation>();
+#endif
 	resource_loader_spine.instance();
 	ResourceLoader::add_resource_format_loader(resource_loader_spine);
 }
@@ -178,10 +178,3 @@ void unregister_spine_types() {
 	resource_loader_spine.unref();
 
 }
-
-#else
-
-void register_spine_types() {}
-void unregister_spine_types() {}
-
-#endif // MODULE_SPINE_ENABLED

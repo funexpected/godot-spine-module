@@ -27,7 +27,6 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  *****************************************************************************/
-#ifdef MODULE_SPINE_ENABLED
 #include "spine_batcher.h"
 
 #define BATCH_CAPACITY 1024
@@ -175,5 +174,3 @@ SpineBatcher::~SpineBatcher() {
 
 	memdelete(command);
 }
-
-#endif // MODULE_SPINE_ENABLED

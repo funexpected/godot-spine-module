@@ -16,6 +16,7 @@ typedef Ref<Texture> TextureRef;
 typedef Ref<ImageTexture> ImageTextureRef;
 
 void _spAtlasPage_createTexture(spAtlasPage* self, const char* path) {
+	print_line(String("loading resource ") + path);
 	TextureRef *ref = memnew(TextureRef);
 	*ref = ResourceLoader::load(path);
 	if (!ref->is_null()){
