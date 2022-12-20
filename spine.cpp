@@ -415,10 +415,14 @@ void Spine::_animation_draw() {
 	}
 }
 
-void Spine::queue_process() {
+void Spine::queue_process_with_time(float p_delta) {
 	if (process_queued) return;
 	process_queued = true;
-	call_deferred("_animation_process", 0.0);
+	call_deferred("_animation_process", p_delta);
+}
+
+void Spine::queue_process() {
+	queue_process_with_time(0.0);
 }
 
 void Spine::_animation_process(float p_delta) {

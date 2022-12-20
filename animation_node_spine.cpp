@@ -188,6 +188,7 @@ float AnimationNodeSpineAnimation::process(float p_time, bool p_seek) {
     ERR_FAIL_COND_V(!sm, 0);
     Spine *sp = Object::cast_to<Spine>(sm->get_node(sm->get_spine_player()));
     ERR_FAIL_COND_V(!sp, 0);
+    ERR_FAIL_COND_V(sp->processing == true, 0);
     int track = sm->get_track();
 
 	float time = get_parameter(this->time);
@@ -204,12 +205,12 @@ float AnimationNodeSpineAnimation::process(float p_time, bool p_seek) {
     float anim_size = sp->get_animation_length(animation);
     if (time > anim_size) {
         time = anim_size;
+        p_time = 0;
     }
-	if (p_seek) {
+    if (p_seek) {
         sp->set_animation_state(track, animation, time);
     } else {
-        sp->seek(track, time);
-        sp->queue_process();
+        sp->queue_process_with_time(p_time);
     }
 	set_parameter(this->time, time);
 	return anim_size - time;

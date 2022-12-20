@@ -178,6 +178,7 @@ public:
 	float tell(int track) const;
 	void set_animation_state(int track, String p_animation, float p_pos);
 	void queue_process();
+	void queue_process_with_time(float p_pos);
 
 	void set_active(bool p_active);
 	bool is_active() const;
