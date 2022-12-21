@@ -182,6 +182,7 @@ public:
 
 	void set_active(bool p_active);
 	bool is_active() const;
+	bool is_processing() const;
 
 	void set_speed(float p_speed);
 	float get_speed() const;

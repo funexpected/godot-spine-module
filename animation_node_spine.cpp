@@ -188,7 +188,7 @@ float AnimationNodeSpineAnimation::process(float p_time, bool p_seek) {
     ERR_FAIL_COND_V(!sm, 0);
     Spine *sp = Object::cast_to<Spine>(sm->get_node(sm->get_spine_player()));
     ERR_FAIL_COND_V(!sp, 0);
-    ERR_FAIL_COND_V(sp->processing == true, 0);
+    ERR_FAIL_COND_V(sp->is_processing(), 0);
     int track = sm->get_track();
 
 	float time = get_parameter(this->time);

@@ -959,6 +959,11 @@ bool Spine::is_active() const {
 	return active;
 }
 
+bool Spine::is_processing() const {
+
+	return processing;
+}
+
 void Spine::set_speed(float p_speed) {
 
 	speed_scale = p_speed;
