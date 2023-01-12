@@ -505,7 +505,7 @@ bool Spine::add(const String &p_name, real_t p_cunstom_scale, bool p_loop, int p
 
 void Spine::clear(int p_track) {
 	if (runtime.is_valid()) {
-		runtime->clear();
+		runtime->clear(p_track);
 	}
 }
 
