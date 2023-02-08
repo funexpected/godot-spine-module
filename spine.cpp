@@ -130,6 +130,8 @@ void Spine::queue_process() {
 }
 
 void Spine::_animation_process(float p_delta) {
+	if (!runtime.is_valid())
+		return;
 	process_queued = false;
 	performance_triangles_generated = 0;
 	if (!is_inside_tree())
