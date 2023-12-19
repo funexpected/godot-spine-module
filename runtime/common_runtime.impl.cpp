@@ -49,7 +49,7 @@ class SPINE_EXTENSION_CLASS: public sp::SpineExtension {
         memfree(ptr);
     }
     virtual char *_readFile(const sp::String &p_path, int *p_length) {
-        String path = p_path.buffer();
+        String path = String(p_path.buffer());
         FileAccess *f = FileAccess::open(path, FileAccess::READ);
         ERR_FAIL_COND_V_MSG(!f, NULL, "Can't read file " + String(path));
 
@@ -74,7 +74,7 @@ class SPINE_TEXTURE_LOADER_CLASS : public sp::TextureLoader {
 		Ref<Texture> *ref = memnew(Ref<Texture>);
 		*ref = ResourceLoader::load(path.buffer());
 		if (!ref->is_null()) {
-			page.setRendererObject(ref);
+			page.texture = ref;
 			page.width = (*ref)->get_width();
 			page.height = (*ref)->get_height();
 		} else {
@@ -84,7 +84,7 @@ class SPINE_TEXTURE_LOADER_CLASS : public sp::TextureLoader {
 				Ref<ImageTexture> *imgtex = memnew(Ref<ImageTexture>);
 				(*imgtex) = Ref<ImageTexture>(memnew(ImageTexture));
 				(*imgtex)->create_from_image(img);
-				page.setRendererObject(imgtex);
+				page.texture = imgtex;
 				page.width = (*imgtex)->get_width();
 				page.height = (*imgtex)->get_height();
 			} else {
@@ -109,10 +109,10 @@ static void spine_animation_callback(sp::AnimationState *state, sp::EventType ty
 			break;
 		case sp::EventType_Event: {
 			Dictionary data;
-			data["name"] = event->getData().getName().buffer();;
+			data["name"] = String(event->getData().getName().buffer());
 			data["int"] = event->getIntValue();
 			data["float"] = event->getFloatValue();
-			data["string"] = event->getStringValue().buffer();
+			data["string"] = String(event->getStringValue().buffer());
 			self->emit_signal("event", "animation_event", entry->getTrackIndex(), data);
 		} break;
 		case sp::EventType_End:
@@ -122,11 +122,11 @@ static void spine_animation_callback(sp::AnimationState *state, sp::EventType ty
 }
 
 static Ref<Texture> spine_get_texture(sp::RegionAttachment *attachment) {
-    Ref<Texture> *ref = (Ref<Texture>*)((sp::AtlasRegion*)attachment->getRendererObject())->page->getRendererObject();
+    Ref<Texture> *ref = (Ref<Texture>*)(attachment->getRegion()->rendererObject);
     return ref? *ref : NULL;
 }
 static Ref<Texture> spine_get_texture(sp::MeshAttachment *attachment) {
-    Ref<Texture> *ref =  (Ref<Texture>*)((sp::AtlasRegion*)attachment->getRendererObject())->page->getRendererObject();
+    Ref<Texture> *ref =  (Ref<Texture>*)(attachment->getRegion()->rendererObject);
     return ref? *ref : NULL;
 }
 
@@ -323,10 +323,9 @@ void SPINE_RUNTIME_CLASS::batch(SpineBatcher* batcher, const Color &modulate, bo
 
 	batcher->reset();
 
-    sp::Vector<sp::Slot*> slots = skeleton->getDrawOrder();
-	for (int i = 0, n = slots.size(); i < n; i++) {
+	for (int i = 0, n = skeleton->getDrawOrder().size(); i < n; i++) {
 
-		sp::Slot *slot = slots[i];
+		sp::Slot *slot = skeleton->getDrawOrder()[i];
 		if (!slot->getAttachment() || slot->getColor().a == 0) {
 			clipper->clipEnd(*slot);
 			continue;
@@ -475,9 +474,9 @@ Array SPINE_RUNTIME_CLASS::get_animation_names() const {
     if (!skeleton || !state) {
 		return names;
 	}
-    sp::Vector<sp::Animation*> animations = state->getData()->getSkeletonData()->getAnimations();
-    for (int i = 0; i < animations.size(); i++) {
-        names.push_back(animations[i]->getName().buffer());
+	sp::SkeletonData* data = state->getData()->getSkeletonData();
+    for (int i = 0; i < data->getAnimations().size(); i++) {
+        names.push_back(String(data->getAnimations()[i]->getName().buffer()));
     }
 	return names;
 }
@@ -487,9 +486,9 @@ Array SPINE_RUNTIME_CLASS::get_skin_names() const {
     if (!skeleton || !state) {
 		return names;
 	}
-    sp::Vector<sp::Skin*> skins = state->getData()->getSkeletonData()->getSkins();
-    for (int i = 0; i < skins.size(); i++) {
-        names.push_back(skins[i]->getName().buffer());
+	sp::SkeletonData* data = state->getData()->getSkeletonData();
+    for (int i = 0; i < data->getSkins().size(); i++) {
+        names.push_back(String(data->getSkins()[i]->getName().buffer()));
     }
     return names;
 }
@@ -582,7 +581,7 @@ String SPINE_RUNTIME_CLASS::get_current_animation(int p_track) const {
 	sp::TrackEntry *entry = state->getCurrent(p_track);
 	if (entry == NULL || entry->getAnimation() == NULL)
 		return "";
-	return entry->getAnimation()->getName().buffer();
+	return String(entry->getAnimation()->getName().buffer());
 }
 
 void SPINE_RUNTIME_CLASS::reset() {
@@ -630,28 +629,26 @@ Dictionary SPINE_RUNTIME_CLASS::get_skeleton(bool individual_textures) const {
 	dict["y"] = skeleton->getY();
 
 	Array bones;
-    sp::Vector<sp::Bone*> bones_vector = skeleton->getBones();
-	for (int i=0; i<bones_vector.size();i++){
-		sp::Bone *b = bones_vector[i];
+	for (int i=0; i<skeleton->getBones().size();i++){
+		sp::Bone *b = skeleton->getBones()[i];
 		Dictionary bi;
-		bi["name"] = b->getData().getName().buffer();
-		bi["parent"] = b->getParent() == NULL? Variant("") : Variant(b->getParent()->getData().getName().buffer());
+		bi["name"] = String(b->getData().getName().buffer());
+		bi["parent"] = b->getParent() == NULL? Variant("") : Variant(String(b->getParent()->getData().getName().buffer()));
 		bones.append(bi);
 	}
 	dict["bones"] = bones;
 
 	Array slots;
-    sp::Vector<sp::Slot*> slots_vector = skeleton->getSlots();
 	sp::Skin* skin = skeleton->getData()->getDefaultSkin();
-	for (int j=0; j<slots_vector.size(); j++){
-		sp::Slot *s = slots_vector[j];
+	for (int j=0; j<skeleton->getSlots().size(); j++){
+		sp::Slot *s = skeleton->getSlots()[j];
 		Dictionary slot_dict;
-		slot_dict["name"] = s->getData().getName().buffer();
+		slot_dict["name"] = String(s->getData().getName().buffer());
 		Array attachments;
         sp::Vector<sp::Attachment*> attachments_vector;
         skin->findAttachmentsForSlot(s->getData().getIndex(), attachments_vector);
         for (int k=0; k<attachments_vector.size(); k++) {
-            attachments.append(attachments_vector[k]->getName().buffer());
+            attachments.append(String(attachments_vector[k]->getName().buffer()));
         }
 		slot_dict["attachments"] = attachments;
 		slots.append(slot_dict);
@@ -659,12 +656,12 @@ Dictionary SPINE_RUNTIME_CLASS::get_skeleton(bool individual_textures) const {
 	dict["slots"] = slots;
 
     
-    slots_vector = skeleton->getDrawOrder();
+    // slots_vector = skeleton->getDrawOrder();
  	if (individual_textures) {
 		Dictionary slot_dict;
-		for (int i = 0, n = slots_vector.size(); i < n; i++) {
-			sp::Slot *s = slots_vector[i];
-			slot_dict[s->getData().getName().buffer()] = s->getData().getIndex();
+		for (int i = 0, n = skeleton->getDrawOrder().size(); i < n; i++) {
+			sp::Slot *s = skeleton->getDrawOrder()[i];
+			slot_dict[String(s->getData().getName().buffer())] = s->getData().getIndex();
 		}
 		dict["item_indexes"] = slot_dict;
 	}
@@ -678,11 +675,11 @@ Dictionary SPINE_RUNTIME_CLASS::get_attachment(const String &p_slot_name, const 
 	}
 	sp::Attachment *attachment = skeleton->getAttachment(p_slot_name.utf8().get_data(), p_attachment_name.utf8().get_data());
 	if (attachment == NULL) return dict;
-	dict["name"] = attachment->getName().buffer();
+	dict["name"] = String(attachment->getName().buffer());
 	if (attachment->getRTTI().isExactly(sp::RegionAttachment::rtti)) {
 		sp::RegionAttachment *info = (sp::RegionAttachment*)attachment;
 		dict["type"] = "region";
-		dict["path"] = info->getPath().buffer();
+		dict["path"] = String(info->getPath().buffer());
 		dict["x"] = info->getX();
 		dict["y"] = info->getY();
 		dict["scaleX"] = info->getScaleX();
@@ -722,7 +719,7 @@ Dictionary SPINE_RUNTIME_CLASS::get_attachment(const String &p_slot_name, const 
 	if (attachment->getRTTI().isExactly(sp::MeshAttachment::rtti)) {
 		sp::MeshAttachment* info = (sp::MeshAttachment*)attachment;
 		dict["type"] = "mesh";
-		dict["path"] = info->getPath().buffer();
+		dict["path"] = String(info->getPath().buffer());
 		dict["color"] = Color(info->getColor().r, info->getColor().g, info->getColor().b, info->getColor().a);
 	}
 	return dict;
@@ -771,7 +768,7 @@ Dictionary SPINE_RUNTIME_CLASS::get_slot(const String &p_slot_name) const {
 	if (slot->getAttachment() == NULL) {
 		dict["attachment"] = Variant();
 	} else {
-		dict["attachment"] = slot->getAttachment()->getName().buffer();
+		dict["attachment"] = String(slot->getAttachment()->getName().buffer());
 	}
 	return dict;
 }
@@ -808,7 +805,7 @@ bool SPINE_RUNTIME_CLASS::add_attachment_node(const String &p_bone_name, const V
 		AttachmentNode *info = (AttachmentNode *)((uint64_t)obj->get_meta("spine_meta"));
 		if (info->slot !=  slot) {
 			// add to different bone, remove first
-			remove_attachment_node(info->slot->getData().getName().buffer(), p_node);
+			remove_attachment_node(String(info->slot->getData().getName().buffer()), p_node);
 		} else {
 			// add to same bone, update params
 			info->ofs = p_ofs;
