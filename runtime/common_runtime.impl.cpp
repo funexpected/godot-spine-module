@@ -291,9 +291,9 @@ SPINE_RUNTIME_CLASS::SPINE_RUNTIME_CLASS(Ref<SpineResource> resource) {
 }
 
 SPINE_RUNTIME_CLASS::~SPINE_RUNTIME_CLASS() {
-    if (state) delete state;
-	if (skeleton) delete skeleton;
-	if (clipper) delete clipper;
+    // if (state) delete state;
+	// if (skeleton) delete skeleton;
+	// if (clipper) delete clipper;
 
 	state = NULL;
 	skeleton = NULL;
@@ -308,6 +308,9 @@ SPINE_RUNTIME_CLASS::~SPINE_RUNTIME_CLASS() {
 
 
 void SPINE_RUNTIME_CLASS::batch(SpineBatcher* batcher, const Color &modulate, bool flip_x, bool flip_y, bool individual_textures) {
+	if (!skeleton || !state) {
+		return;
+	}
     skeleton->getColor().set(modulate.r, modulate.g, modulate.b, modulate.a);
 
 	int additive = 0;
@@ -410,7 +413,9 @@ void SPINE_RUNTIME_CLASS::batch(SpineBatcher* batcher, const Color &modulate, bo
 }
 
 void SPINE_RUNTIME_CLASS::process(float delta) {
-    if (state == NULL) return;
+	if (!skeleton || !state) {
+		return;
+	}
     state->update(delta);
     state->apply(*skeleton);
     skeleton->updateWorldTransform();
@@ -453,7 +458,10 @@ void SPINE_RUNTIME_CLASS::process(float delta) {
 }
 
 float SPINE_RUNTIME_CLASS::get_animation_length(String p_animation) const {
-    if (state == NULL || p_animation.empty()) return 0;
+	if (!skeleton || !state) {
+		return 0;
+	}
+    if (p_animation.empty()) return 0;
     sp::Animation* animation = state->getData()->getSkeletonData()->findAnimation(p_animation.utf8().get_data());
     if (animation == NULL) {
         return 0;
@@ -464,7 +472,9 @@ float SPINE_RUNTIME_CLASS::get_animation_length(String p_animation) const {
 
 Array SPINE_RUNTIME_CLASS::get_animation_names() const {
     Array names;
-    if (state == NULL) return names;
+    if (!skeleton || !state) {
+		return names;
+	}
     sp::Vector<sp::Animation*> animations = state->getData()->getSkeletonData()->getAnimations();
     for (int i = 0; i < animations.size(); i++) {
         names.push_back(animations[i]->getName().buffer());
@@ -474,7 +484,9 @@ Array SPINE_RUNTIME_CLASS::get_animation_names() const {
 
 Array SPINE_RUNTIME_CLASS::get_skin_names() const {
     Array names;
-    if (state == NULL) return names;
+    if (!skeleton || !state) {
+		return names;
+	}
     sp::Vector<sp::Skin*> skins = state->getData()->getSkeletonData()->getSkins();
     for (int i = 0; i < skins.size(); i++) {
         names.push_back(skins[i]->getName().buffer());
@@ -483,23 +495,33 @@ Array SPINE_RUNTIME_CLASS::get_skin_names() const {
 }
 
 bool SPINE_RUNTIME_CLASS::has_animation(const String &p_name) {
-	if (skeleton == NULL || p_name.empty()) return false;
+	if (!skeleton || !state) {
+		return false;
+	}
+	if (p_name.empty()) return false;
     return NULL != state->getData()->getSkeletonData()->findAnimation(p_name.utf8().get_data());
 }
 
 bool SPINE_RUNTIME_CLASS::set_skin(const String &p_name) {
-    if (skeleton == NULL) return false;
+	if (!skeleton || !state) {
+		return false;
+	}
 	skeleton->setSkin(p_name.utf8().get_data());
     return true;
 }
 
 void SPINE_RUNTIME_CLASS::mix(const String &p_from, const String &p_to, real_t p_duration) {
-	if (state == NULL) return;
+	if (!skeleton || !state) {
+		return;
+	}
     state->getData()->setMix(p_from.utf8().get_data(), p_to.utf8().get_data(), p_duration);
 }
 
 bool SPINE_RUNTIME_CLASS::play(const String &p_name, real_t p_cunstom_scale, bool p_loop, int p_track, float p_delay) {
-    if (skeleton == NULL || p_name.empty()) return false;
+	if (!skeleton || !state) {
+		return false;
+	}
+    if (p_name.empty()) return false;
 	sp::Animation *animation = skeleton->getData()->findAnimation(p_name.utf8().get_data());
 	if (animation == NULL) return false;
 	sp::TrackEntry *entry = state->setAnimation(p_track, animation, p_loop);
@@ -510,7 +532,10 @@ bool SPINE_RUNTIME_CLASS::play(const String &p_name, real_t p_cunstom_scale, boo
 }
 
 void SPINE_RUNTIME_CLASS::set_animation_state(int p_track, String p_animation, float p_pos) {
-	if (skeleton == NULL || p_animation.empty()) return;
+	if (!skeleton || !state) {
+		return;
+	}
+	if (p_animation.empty()) return;
 	sp::Animation *animation = skeleton->getData()->findAnimation(p_animation.utf8().get_data());
 	if (animation == NULL) return;
 	sp::TrackEntry *entry = state->setAnimation(p_track, animation, false);
@@ -519,7 +544,10 @@ void SPINE_RUNTIME_CLASS::set_animation_state(int p_track, String p_animation, f
 }
 
 bool SPINE_RUNTIME_CLASS::add(const String &p_name, real_t p_cunstom_scale, bool p_loop, int p_track, float p_delay) {
-	if (skeleton == NULL || p_name.empty()) return false;
+	if (!skeleton || !state) {
+		return false;
+	}
+	if (p_name.empty()) return false;
 	sp::Animation *animation = skeleton->getData()->findAnimation(p_name.utf8().get_data());
 	if (animation == NULL) return false;
 	sp::TrackEntry *entry = state->addAnimation(p_track, animation, p_loop, p_delay);
@@ -528,7 +556,9 @@ bool SPINE_RUNTIME_CLASS::add(const String &p_name, real_t p_cunstom_scale, bool
 }
 
 void SPINE_RUNTIME_CLASS::clear(int p_track) {
-	if (state == NULL) return;
+	if (!skeleton || !state) {
+		return;
+	}
 	if (p_track == -1)
         state->clearTracks();
 	else
@@ -536,14 +566,18 @@ void SPINE_RUNTIME_CLASS::clear(int p_track) {
 }
 
 bool SPINE_RUNTIME_CLASS::is_playing(int p_track) const {
-    if (state == NULL) return false;
+    if (!skeleton || !state) {
+		return false;
+	}
 	sp::TrackEntry *entry = state->getCurrent(p_track);
 	if (entry == NULL) return false;
 	return entry->getLoop() || entry->getTrackTime() < entry->getAnimationEnd();
 }
 
 String SPINE_RUNTIME_CLASS::get_current_animation(int p_track) const {
-    if (state == NULL) return "";
+    if (!skeleton || !state) {
+		return "";
+	}
 	
 	sp::TrackEntry *entry = state->getCurrent(p_track);
 	if (entry == NULL || entry->getAnimation() == NULL)
@@ -552,7 +586,9 @@ String SPINE_RUNTIME_CLASS::get_current_animation(int p_track) const {
 }
 
 void SPINE_RUNTIME_CLASS::reset() {
-	if (skeleton == NULL) return;
+	if (!skeleton || !state) {
+		return;
+	}
 	skeleton->setToSetupPose();
 	state->update(0);
 	state->apply(*skeleton);
@@ -560,14 +596,18 @@ void SPINE_RUNTIME_CLASS::reset() {
 }
 
 void SPINE_RUNTIME_CLASS::seek(int track, float p_pos) {
-	if (state == NULL) return;
+	if (!skeleton || !state) {
+		return;
+	}
 	sp::TrackEntry *entry = state->getCurrent(track);
 	if (entry == NULL) return;
 	entry->setTrackTime(p_pos);
 }
 
 float SPINE_RUNTIME_CLASS::tell(int track) const {
-	if (state == NULL) return 0;
+	if (!skeleton || !state) {
+		return 0;
+	}
 	sp::TrackEntry *entry = state->getCurrent(track);
 	if (entry == NULL) return 0;
 	return entry->getTrackTime();
@@ -575,7 +615,9 @@ float SPINE_RUNTIME_CLASS::tell(int track) const {
 
 Dictionary SPINE_RUNTIME_CLASS::get_skeleton(bool individual_textures) const {
 	Dictionary dict;
-    if (skeleton == NULL) return dict;
+    if (!skeleton || !state) {
+		return dict;
+	}
 
 
 	dict["bonesCount"] = (int)skeleton->getBones().size();
@@ -631,7 +673,9 @@ Dictionary SPINE_RUNTIME_CLASS::get_skeleton(bool individual_textures) const {
 
 Dictionary SPINE_RUNTIME_CLASS::get_attachment(const String &p_slot_name, const String &p_attachment_name) const {
 	Dictionary dict;
-	if (skeleton == NULL) return dict;
+	if (!skeleton || !state) {
+		return dict;
+	}
 	sp::Attachment *attachment = skeleton->getAttachment(p_slot_name.utf8().get_data(), p_attachment_name.utf8().get_data());
 	if (attachment == NULL) return dict;
 	dict["name"] = attachment->getName().buffer();
@@ -686,7 +730,10 @@ Dictionary SPINE_RUNTIME_CLASS::get_attachment(const String &p_slot_name, const 
 
 Dictionary SPINE_RUNTIME_CLASS::get_bone(const String &p_bone_name) const {
 	Dictionary dict;
-	if (skeleton == NULL || p_bone_name.empty()) return dict;
+	if (!skeleton || !state) {
+		return dict;
+	}
+	if (p_bone_name.empty()) return dict;
 	sp::Bone *bone = skeleton->findBone(p_bone_name.utf8().get_data());
 	if (bone == NULL) return dict;
 	dict["x"] = bone->getX();
@@ -714,7 +761,10 @@ Dictionary SPINE_RUNTIME_CLASS::get_bone(const String &p_bone_name) const {
 
 Dictionary SPINE_RUNTIME_CLASS::get_slot(const String &p_slot_name) const {
     Dictionary dict;
-    if (skeleton == NULL || p_slot_name.empty()) return dict;
+	if (!skeleton || !state) {
+		return dict;
+	}
+    if (p_slot_name.empty()) return dict;
 	sp::Slot *slot = skeleton->findSlot(p_slot_name.utf8().get_data());
     if (slot == NULL) return dict;
 	dict["color"] = Color(slot->getColor().r, slot->getColor().g, slot->getColor().b, slot->getColor().a);
@@ -727,7 +777,9 @@ Dictionary SPINE_RUNTIME_CLASS::get_slot(const String &p_slot_name) const {
 }
 
 bool SPINE_RUNTIME_CLASS::set_attachment(const String &p_slot_name, const Variant &p_attachment) {
-	if (skeleton == NULL) return false;
+	if (!skeleton || !state) {
+	 	return false;
+	}
 	if (p_attachment.get_type() == Variant::STRING)
 		skeleton->setAttachment(p_slot_name.utf8().get_data(), ((const String)p_attachment).utf8().get_data());
 	else
@@ -740,8 +792,10 @@ bool SPINE_RUNTIME_CLASS::has_attachment_node(const String &p_bone_name, const V
 }
 
 bool SPINE_RUNTIME_CLASS::add_attachment_node(const String &p_bone_name, const Variant &p_node, const Vector2 &p_ofs, const Vector2 &p_scale, const real_t p_rot) {
-
-	if (skeleton == NULL || p_bone_name.empty()) return false;
+	if (!skeleton || !state) {
+		return false;
+	}
+	if (p_bone_name.empty()) return false;
 	sp::Slot *slot = skeleton->findSlot(p_bone_name.utf8().get_data());
     if (slot == NULL) return false;
 	Object *obj = p_node;
@@ -778,7 +832,10 @@ bool SPINE_RUNTIME_CLASS::add_attachment_node(const String &p_bone_name, const V
 }
 
 bool SPINE_RUNTIME_CLASS::remove_attachment_node(const String &p_bone_name, const Variant &p_node) {
-    if (skeleton == NULL || p_bone_name.empty()) return false;
+	if (!skeleton || !state) {
+		return false;
+	}
+    if (p_bone_name.empty()) return false;
 	sp::Slot *slot = skeleton->findSlot(p_bone_name.utf8().get_data());
     if (slot == NULL) return false;
 	Object *obj = p_node;
@@ -799,7 +856,9 @@ bool SPINE_RUNTIME_CLASS::remove_attachment_node(const String &p_bone_name, cons
 
 // this looks scary
 Ref<Shape2D> SPINE_RUNTIME_CLASS::get_bounding_box(const String& p_slot_name, const String& p_attachment_name) {
-    if (skeleton == NULL) return Ref<Shape2D>();
+	if (!skeleton || !state) {
+		return Ref<Shape2D>();
+	}
 	sp::Attachment *attachment = skeleton->getAttachment(p_slot_name.utf8().get_data(), p_attachment_name.utf8().get_data());
 	if (attachment == NULL) return Ref<Shape2D>();
 	if (attachment->getRTTI().isExactly(sp::BoundingBoxAttachment::rtti)) return Ref<Shape2D>();
@@ -818,7 +877,9 @@ Ref<Shape2D> SPINE_RUNTIME_CLASS::get_bounding_box(const String& p_slot_name, co
 
 // this looks scary as well
 bool SPINE_RUNTIME_CLASS::add_bounding_box(const String &p_bone_name, const String &p_slot_name, const String &p_attachment_name, const Variant &p_node, const Vector2 &p_ofs, const Vector2 &p_scale, const real_t p_rot) {
-	if (skeleton == NULL) return false;
+	if (!skeleton || !state) {
+		return false;
+	}
 	Object *obj = p_node;
 	if (obj == NULL) return false;
 	CollisionObject2D *node = Object::cast_to<CollisionObject2D>(obj);
@@ -830,12 +891,18 @@ bool SPINE_RUNTIME_CLASS::add_bounding_box(const String &p_bone_name, const Stri
 }
 
 Vector2 SPINE_RUNTIME_CLASS::get_bone_position(const String &bone_name) {
+	if (!skeleton || !state) {
+		return Vector2();
+	}
 	if (bone_name.empty()) return Vector2();
     sp::Bone *bone = skeleton->findBone(bone_name.utf8().get_data());
     if (bone == NULL) return Vector2();
     return Vector2(bone->getX(), bone->getY());
 }
 float SPINE_RUNTIME_CLASS::get_bone_rotation(const String &bone_name) {
+	if (!skeleton || !state) {
+		return 0.0;
+	}
 	if (bone_name.empty()) return 0.0;
     sp::Bone *bone = skeleton->findBone(bone_name.utf8().get_data());
     if (bone == NULL) return 0.0;
