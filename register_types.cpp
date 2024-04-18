@@ -27,14 +27,16 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  *****************************************************************************/
-#include <core/class_db.h>
-#include <core/project_settings.h>
+// #include <core/class_db.h>
+// #include <core/project_settings.h>
+#include <core/config/project_settings.h>
 #include "register_types.h"
 
 #include "spine.h"
 #include "animation_node_spine.h"
 
-#include "core/os/file_access.h"
+#include "core/io/file_access.h"
+#include "scene/resources/image_texture.h"
 #include "core/os/os.h"
 #include "core/io/resource_loader.h"
 #include "scene/resources/texture.h"
@@ -42,138 +44,34 @@
 typedef Ref<Texture> TextureRef;
 typedef Ref<ImageTexture> ImageTextureRef;
 
-// void _spAtlasPage_createTexture(spAtlasPage* self, const char* path) {
-// 	TextureRef *ref = memnew(TextureRef);
-// 	*ref = ResourceLoader::load(path);
-// 	if (!ref->is_null()){
-// 		self->rendererObject = ref;
-// 		self->width = (*ref)->get_width();
-// 		self->height = (*ref)->get_height();
-// 	} else {
-// 		memdelete(ref);
-// 		Ref<Image> img = memnew(Image);
-// 		if (img->load(path) == OK){
-// 			ImageTextureRef *imgtex = memnew(ImageTextureRef);
-// 			(*imgtex) = Ref<ImageTexture>(memnew(ImageTexture));
-// 			(*imgtex)->create_from_image(img);
-// 			self->rendererObject = imgtex;
-// 			self->width = (*imgtex)->get_width();
-// 			self->height = (*imgtex)->get_height();
-// 		} else {
-// 			ERR_FAIL();
-// 		}
-		
-// 	}
-// }
-
-// void _spAtlasPage_disposeTexture(spAtlasPage* self) {
-
-// 	if(TextureRef *ref = static_cast<TextureRef *>(self->rendererObject))
-// 		memdelete(ref);
-// }
 
 
-// char* _spUtil_readFile(const char* p_path, int* p_length) {
+static Ref<ResourceFormatLoaderSpine> resource_loader_spine;
 
-// 	String str_path = String::utf8(p_path);
-// 	FileAccess *f = FileAccess::open(p_path, FileAccess::READ);
-// 	ERR_FAIL_COND_V_MSG(!f, NULL, "Can't read file " + String(p_path));
 
-// 	*p_length = f->get_len();
 
-// 	char *data = (char *)_spMalloc(*p_length, __FILE__, __LINE__);
-// 	data = (char *)_spMalloc(*p_length, __FILE__, __LINE__);
-// 	ERR_FAIL_COND_V(data == NULL, NULL);
-
-// 	f->get_buffer((uint8_t *)data, *p_length);
-
-// 	memdelete(f);
-// 	return data;
-// }
-
-// static void *spine_malloc(size_t p_size) {
-
-// 	if (p_size == 0)
-// 		return NULL;
-// 	return memalloc(p_size);
-// }
-
-// static void *spine_realloc(void *ptr, size_t p_size) {
-
-// 	if (p_size == 0)
-// 		return NULL;
-// 	return memrealloc(ptr, p_size);
-// }
-
-// static void spine_free(void *ptr) {
-
-// 	if (ptr == NULL)
-// 		return;
-// 	memfree(ptr);
-// }
-
-class ResourceFormatLoaderSpine : public ResourceFormatLoader {
-public:
-
-	virtual RES load(const String &p_path, const String& p_original_path = "", Error *p_err=NULL) {
-		return SpineRuntime::load_resource(p_path);
+void initialize_spine_module(ModuleInitializationLevel p_level) {
+	if (p_level != MODULE_INITIALIZATION_LEVEL_SCENE) {
+		return;
 	}
+	GDREGISTER_CLASS(Spine);
+	GDREGISTER_CLASS(SpineResource);
 
-	virtual void get_recognized_extensions(List<String> *p_extensions) const {
-		p_extensions->push_back("skel");
-		p_extensions->push_back("json");
-		p_extensions->push_back("atlas");
-	}
+// #ifdef MODULE_SPINE_WITH_ANIMATION_NODES
+// 	GDREGISTER_CLASS(SpineMachine);
+// 	GDREGISTER_CLASS(AnimationNodeSpineAnimation);
+// #endif
 
-	virtual void get_dependencies(const String &p_path, List<String> *p_dependencies, bool p_add_types) {
-		// String base_dir = p_path.get_base_dir();
-		// String base_name = p_path.get_basename();
-		// String atlas_path = base_name + ".atlas";
-		// if (!FileAccess::exists(atlas_path)) return;
-		// p_dependencies->push_back(atlas_path);
-		// Vector<uint8_t> bytes = FileAccess::get_file_as_array(atlas_path);
-		// spAtlas *atlas = spAtlas_create((const char*)bytes.ptr(), bytes.size(), base_dir.utf8(), NULL);
-		// spAtlasPage *page = atlas->pages;
-		// while (page) {
-		// 	p_dependencies->push_back(base_dir + "/" + page->name);
-		// 	page = page->next;
-		// }
-		// spAtlas_dispose(atlas);
-	}
-
-	virtual bool handles_type(const String& p_type) const {
-
-		return p_type=="SpineResource";
-	}
-
-	virtual String get_resource_type(const String &p_path) const {
-
-		String el = p_path.get_extension().to_lower();
-		if (el=="json" || el=="skel")
-			return "SpineResource";
-		return "";
-	}
-};
-
-Ref<ResourceFormatLoaderSpine> resource_loader_spine;
-
-void register_spine_types() {
-
-	ClassDB::register_class<Spine>();
-	ClassDB::register_class<SpineResource>();
-	// ClassDB::register_class<SpineRuntime_3_6>();
-	// ClassDB::register_class<SpineRuntime_4_1>();
-#ifdef MODULE_SPINE_WITH_ANIMATION_NODES
-	ClassDB::register_class<SpineMachine>();
-	ClassDB::register_class<AnimationNodeSpineAnimation>();
-#endif
-	resource_loader_spine.instance();
+	resource_loader_spine.instantiate();
 	ResourceLoader::add_resource_format_loader(resource_loader_spine);
 }
 
-void unregister_spine_types() {
 
+void uninitialize_spine_module(ModuleInitializationLevel p_level) {
+	if (p_level != MODULE_INITIALIZATION_LEVEL_SCENE) {
+		return;
+	}
 	ResourceLoader::remove_resource_format_loader(resource_loader_spine);
 	resource_loader_spine.unref();
-
 }
+

@@ -7,12 +7,12 @@
 #include "modules/spine/spine_batcher.h"
 #include "scene/resources/convex_polygon_shape_2d.h"
 #include "scene/2d/collision_object_2d.h"
-#include "core/os/file_access.h"
+#include "core/io/file_access.h"
 #include "core/io/resource_loader.h"
 #include "scene/resources/texture.h"
+#include "scene/resources/image_texture.h"
 
-
-typedef Ref<Texture> TextureRef;
+typedef Ref<Texture2D> TextureRef;
 typedef Ref<ImageTexture> ImageTextureRef;
 
 void _spAtlasPage_createTexture(spAtlasPage* self, const char* path) {
@@ -48,18 +48,19 @@ void _spAtlasPage_disposeTexture(spAtlasPage* self) {
 char* _spUtil_readFile(const char* p_path, int* p_length) {
 
 	String str_path = String::utf8(p_path);
-	FileAccess *f = FileAccess::open(p_path, FileAccess::READ);
-	ERR_FAIL_COND_V_MSG(!f, NULL, "Can't read file " + String(p_path));
+	
+	Error err;
+	Ref<FileAccess> file = FileAccess::open(p_path, FileAccess::READ, &err);
+	ERR_FAIL_COND_V_MSG(file.is_null(), NULL, "Cannot open file '" + String(p_path) + "'.");
 
-	*p_length = f->get_len();
+	*p_length = file->get_length();
 
 	char *data = (char *)_spMalloc(*p_length, __FILE__, __LINE__);
 	// data = (char *)_spMalloc(*p_length, __FILE__, __LINE__);
 	ERR_FAIL_COND_V(data == NULL, NULL);
 
-	f->get_buffer((uint8_t *)data, *p_length);
-
-	memdelete(f);
+	file->get_buffer((uint8_t *)data, *p_length);
+	file->close();
 	return data;
 }
 
@@ -134,7 +135,7 @@ void SpineRuntime_3_6::init() {
 
 Ref<SpineResource> SpineRuntime_3_6::load_resource(const String &p_path) {
     Ref<SpineResource> res;
-    res.instance();
+    res.instantiate();
     String p_atlas = p_path.get_basename() + ".atlas";
     spAtlas* atlas = NULL;
     spSkeletonData* data = NULL;
@@ -187,7 +188,7 @@ Ref<SpineRuntime> SpineRuntime_3_6::with_resource(Ref<SpineResource> res) {
     }
 
     Ref<SpineRuntime_3_6> rt;
-    rt.instance();
+    rt.instantiate();
 
 	rt->skeleton = spSkeleton_create((spSkeletonData*)res->data);
 	rt->root_bone = rt->skeleton->bones[0];

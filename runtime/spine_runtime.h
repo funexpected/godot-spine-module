@@ -1,7 +1,7 @@
 #ifndef SPINE_RUNTIME_H
 #define SPINE_RUNTIME_H
 
-#include "core/resource.h"
+#include "core/io/resource.h"
 #include "scene/resources/shape_2d.h"
 
 #include "modules/spine/spine_batcher.h"
@@ -21,8 +21,8 @@ public:
     Ref<SpineRuntime> create_runtime();
 };
 
-class SpineRuntime: public Reference {
-    GDCLASS(SpineRuntime, Reference);
+class SpineRuntime: public RefCounted {
+    GDCLASS(SpineRuntime, RefCounted);
 
 protected:
     static void _bind_methods();

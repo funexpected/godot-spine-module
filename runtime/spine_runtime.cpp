@@ -14,7 +14,7 @@
 #ifdef SPINE_RUNTIME_4_1_ENABLED
 #include "spine_4_1/runtime.h"
 #endif
-#include "core/os/file_access.h"
+#include "core/io/file_access.h"
 
 void SpineRuntime::init() {
 #ifdef SPINE_RUNTIME_3_6_ENABLED    
@@ -37,13 +37,14 @@ void SpineRuntime::init() {
 Ref<SpineResource> SpineRuntime::load_resource(const String &p_path) {
     Ref<SpineResource> res;
     if (p_path.ends_with(".json")) {
-        FileAccess* file = FileAccess::open(p_path, FileAccess::READ);
-        if (file == NULL) {
+
+        Error err;
+        Ref<FileAccess> file = FileAccess::open(p_path, FileAccess::READ, &err);
+        if (err != OK) {
             return res;
         }
         String json_content = file->get_as_utf8_string().replace(" ", "").replace("\n", "");
         file->close();
-        memdelete(file);
 #ifdef SPINE_RUNTIME_3_6_ENABLED
         if (json_content.find("\"spine\":\"3.6") >= 0) {
             res = SpineRuntime_3_6::load_resource(p_path);
@@ -73,14 +74,14 @@ Ref<SpineResource> SpineRuntime::load_resource(const String &p_path) {
             ERR_FAIL_V_MSG(res, "No suitable spine runtime found");
         }
     } else if (p_path.ends_with(".skel")) {
-        FileAccess* file = FileAccess::open(p_path, FileAccess::READ);
-        if (file == NULL) {
+        Error err;
+        Ref<FileAccess> file = FileAccess::open(p_path, FileAccess::READ, &err);
+        if (err != OK) {
             return res;
         }
         uint8_t header[32];
         file->get_buffer(header, 32);
         file->close();
-        memdelete(file);
 
 #ifdef SPINE_RUNTIME_3_6_ENABLED
         if (header[29] == '3' && header[30] == '.' && header[31] == '6') {

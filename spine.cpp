@@ -29,8 +29,7 @@
  *****************************************************************************/
 #include "spine.h"
 #include "core/io/resource_loader.h"
-#include <core/engine.h>
-#include <core/method_bind_ext.gen.inc>
+
 
 VARIANT_ENUM_CAST(Spine::AnimationProcessMode);
 VARIANT_ENUM_CAST(Spine::DebugAttachmentMode);
@@ -43,26 +42,31 @@ Array Spine::get_invalid_names() {
 	return *invalid_names;
 }
 
-// void Spine::spine_animation_callback(spAnimationState *p_state, spEventType p_type, spTrackEntry *p_track, spEvent *p_event) {
 
-// 	((Spine *)p_state->rendererObject)->_on_animation_state_event(p_track->trackIndex, p_type, p_event, 1);
-// }
 
-// String Spine::build_state_hash() {
-// 	if (!state) return "";
-// 	PoolStringArray items;
-// 	for (int i=0; i < state->tracksCount; i++) {
-// 		spTrackEntry* track = state->tracks[i];
-// 		if (!track || !track->animation) continue;
+Ref<Resource> ResourceFormatLoaderSpine::load(const String &p_path, const String &p_original_path, Error *r_error, bool p_use_sub_threads, float *r_progress, CacheMode p_cache_mode) {
+	return SpineRuntime::load_resource(p_path);
+}
 
-// 		items.push_back(track->animation->name);
-// 		items.push_back(track->loop ?
-// 			String::num(FMOD(track->trackTime, track->animation->duration), 3) :
-// 			String::num(MIN(track->trackTime, track->animation->duration), 3)
-// 		);
-// 	}
-// 	return items.join("::");
-// }
+
+
+void ResourceFormatLoaderSpine::get_recognized_extensions(List<String> *p_extensions) const {
+	p_extensions->push_back("skel");
+	p_extensions->push_back("json");
+	p_extensions->push_back("atlas");
+}
+
+bool ResourceFormatLoaderSpine::handles_type(const String &p_type) const {
+	return (p_type=="SpineResource");
+}
+
+String ResourceFormatLoaderSpine::get_resource_type(const String &p_path) const {
+	String el = p_path.get_extension().to_lower();
+	if (el=="json" || el=="skel")
+		return "SpineResource";
+	return "";
+}
+
 
 // void Spine::_on_animation_state_event(int p_track, spEventType p_type, spEvent *p_event, int p_loop_count) {
 
@@ -94,25 +98,11 @@ void Spine::_spine_dispose() {
 		stop();
 	}
 
-	res = RES();
+	res = Ref<SpineResource>();
 	runtime = Ref<SpineRuntime>();
 
-	update();
+	queue_redraw();
 }
-
-// static Ref<Texture> spine_get_texture(spRegionAttachment *attachment) {
-
-// 	if (Ref<Texture> *ref = static_cast<Ref<Texture> *>(((spAtlasRegion *)attachment->rendererObject)->page->rendererObject))
-// 		return *ref;
-// 	return NULL;
-// }
-
-// static Ref<Texture> spine_get_texture(spMeshAttachment *attachment) {
-
-// 	if (Ref<Texture> *ref = static_cast<Ref<Texture> *>(((spAtlasRegion *)attachment->rendererObject)->page->rendererObject))
-// 		return *ref;
-// 	return NULL;
-// }
 
 void Spine::_animation_draw() {
 	if (runtime.is_null())
@@ -190,7 +180,7 @@ void Spine::_animation_process(float p_delta) {
     //     c.b = slot->color.b;
     //     node->call("set_modulate", c);
 	// }
-	update();
+	queue_redraw();
 }
 
 void Spine::_set_process(bool p_process, bool p_force) {
@@ -408,7 +398,10 @@ void Spine::set_resource(Ref<SpineResource> p_data) {
 	}
 	
 	runtime = res->create_runtime();
-	runtime->connect("event", this, "emit_signal");
+	// TODO: connect signals
+	// runtime->connect("event", this, "emit_signal");
+	// runtime->connect("event", callable_mp(this, &Spine::emit_spine_signal));
+
 
 	// if (res.is_null())
 	// 	return;
@@ -432,8 +425,11 @@ void Spine::set_resource(Ref<SpineResource> p_data) {
 	else
 		reset();
 
-	_change_notify();
 }
+
+// void Spine::emit_spine_signal(String str, String str2) {
+// 	emit_signal(str, str2);
+// }
 
 Ref<SpineResource> Spine::get_resource() {
 	return res;
@@ -613,7 +609,7 @@ String Spine::get_autoplay() const {
 void Spine::set_modulate(const Color &p_color) {
 
 	modulate = p_color;
-	update();
+	queue_redraw();
 }
 
 Color Spine::get_modulate() const {
@@ -624,12 +620,12 @@ Color Spine::get_modulate() const {
 void Spine::set_flip_x(bool p_flip) {
 
 	flip_x = p_flip;
-	update();
+	queue_redraw();
 }
 
 void Spine::set_individual_textures(bool is_individual)	{
 	individual_textures = is_individual;
-	update();
+	queue_redraw();
 }
 
 bool Spine::get_individual_textures() const {
@@ -639,7 +635,7 @@ bool Spine::get_individual_textures() const {
 void Spine::set_flip_y(bool p_flip) {
 
 	flip_y = p_flip;
-	update();
+	queue_redraw();
 }
 
 bool Spine::is_flip_x() const {
@@ -847,7 +843,7 @@ Spine::AnimationProcessMode Spine::get_animation_process_mode() const {
 // void Spine::set_fx_slot_prefix(const String &p_prefix) {
 
 // 	fx_slot_prefix = p_prefix.utf8();
-// 	update();
+// 	queue_redraw();
 // }
 
 // String Spine::get_fx_slot_prefix() const {
@@ -860,7 +856,7 @@ Spine::AnimationProcessMode Spine::get_animation_process_mode() const {
 void Spine::set_debug_bones(bool p_enable) {
 
 	debug_bones = p_enable;
-	update();
+	queue_redraw();
 }
 
 bool Spine::is_debug_bones() const {
@@ -885,7 +881,7 @@ void Spine::set_debug_attachment(DebugAttachmentMode p_mode, bool p_enable) {
 			debug_attachment_bounding_box = p_enable;
 			break;
 	};
-	update();
+	queue_redraw();
 }
 
 bool Spine::is_debug_attachment(DebugAttachmentMode p_mode) const {
@@ -964,7 +960,7 @@ void Spine::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("_animation_process"), &Spine::_animation_process);
 
 	ADD_PROPERTY(PropertyInfo(Variant::INT, "process_mode", PROPERTY_HINT_ENUM, "Fixed,Idle"), "set_animation_process_mode", "get_animation_process_mode");
-	ADD_PROPERTY(PropertyInfo(Variant::REAL, "speed", PROPERTY_HINT_RANGE, "-64,64,0.01"), "set_speed", "get_speed");
+	ADD_PROPERTY(PropertyInfo(Variant::FLOAT, "speed", PROPERTY_HINT_RANGE, "-64,64,0.01"), "set_speed", "get_speed");
 	ADD_PROPERTY(PropertyInfo(Variant::BOOL, "active"), "set_active", "is_active");
 	ADD_PROPERTY(PropertyInfo(Variant::INT, "skip_frames", PROPERTY_HINT_RANGE, "0, 100, 1"), "set_skip_frames", "get_skip_frames");
 	ADD_PROPERTY(PropertyInfo(Variant::BOOL, "debug_bones"), "set_debug_bones", "is_debug_bones");
@@ -1061,7 +1057,7 @@ Rect2 Spine::_edit_get_rect() const {
 
 Spine::Spine()
 	: batcher(this) {
-	res = RES();
+	res = Ref<SpineResource>();
 	runtime = Ref<SpineRuntime>();
 	// world_verts.resize(1000); // Max number of vertices per mesh.
 	// memset(world_verts.ptrw(), 0, world_verts.size() * sizeof(float));

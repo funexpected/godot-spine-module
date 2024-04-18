@@ -174,7 +174,7 @@ void AnimationNodeSpineAnimation::_get_property_list(List<PropertyInfo> *p_list)
 }
 
 void AnimationNodeSpineAnimation::get_parameter_list(List<PropertyInfo> *r_list) const {
-	r_list->push_back(PropertyInfo(Variant::REAL, time, PROPERTY_HINT_NONE, "", 0));
+	r_list->push_back(PropertyInfo(Variant::FLOAT, time, PROPERTY_HINT_NONE, "", 0));
 }
 
 String AnimationNodeSpineAnimation::get_caption() const {

@@ -14,8 +14,9 @@
 #define SPINE_RUNTIME_VERSION_STRING SPINE_STR(SPINE_RUNTIME_IMPL)
 
 
-#include "core/os/file_access.h"
+#include "core/io/file_access.h"
 #include "scene/resources/texture.h"
+#include "scene/resources/image_texture.h"
 #include "scene/resources/convex_polygon_shape_2d.h"
 #include "scene/2d/collision_object_2d.h"
 
@@ -50,17 +51,18 @@ class SPINE_EXTENSION_CLASS: public sp::SpineExtension {
     }
     virtual char *_readFile(const sp::String &p_path, int *p_length) {
         String path = p_path.buffer();
-        FileAccess *f = FileAccess::open(path, FileAccess::READ);
-        ERR_FAIL_COND_V_MSG(!f, NULL, "Can't read file " + String(path));
 
-        *p_length = f->get_len();
+		Error err;
+        Ref<FileAccess> f = FileAccess::open(path, FileAccess::READ, &err);
+        ERR_FAIL_COND_V_MSG(err != OK, NULL, "Can't read file " + String(path));
+
+        *p_length = f->get_length();
 
         char *data = (char *)_alloc(*p_length, __FILE__, __LINE__);
         ERR_FAIL_COND_V(data == NULL, NULL);
 
         f->get_buffer((uint8_t *)data, *p_length);
 
-        memdelete(f);
         return data;
     }
 };
@@ -75,7 +77,7 @@ class SPINE_TEXTURE_LOADER_CLASS : public sp::TextureLoader {
 		if (path.begins_with("res:/") && !path.begins_with("res://")) {
 			path = path.replace("res:/", "res://");
 		}
-		Ref<Texture> *ref = memnew(Ref<Texture>);
+		Ref<Texture2D> *ref = memnew(Ref<Texture2D>);
 		*ref = ResourceLoader::load(path);
 		if (!ref->is_null()) {
 			page.setRendererObject(ref);
@@ -254,7 +256,7 @@ Ref<SpineResource> SPINE_RUNTIME_CLASS::load_resource(const String &p_path) {
 		ERR_FAIL_V_MSG(Ref<SpineResource>(), err_msg);
     }
     
-    resource.instance();
+    resource.instantiate();
     resource->atlas = atlas;
     resource->data = skeletonData;
     resource->runtime_version = SPINE_RUNTIME_VERSION_STRING;
