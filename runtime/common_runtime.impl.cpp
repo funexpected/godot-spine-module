@@ -334,7 +334,7 @@ void SPINE_RUNTIME_CLASS::batch(SpineBatcher* batcher, const Color &modulate, bo
             vertices_count = 8;
 #ifdef SPINE_RUNTIME_3
             attachment->computeWorldVertices(slot->getBone(), world_verts, 0, 2);
-#elifdef SPINE_RUNTIME_4_0
+#elif defined(SPINE_RUNTIME_4_0)
 			attachment->computeWorldVertices(slot->getBone(), world_verts, 0, 2);
 #else
             attachment->computeWorldVertices(*slot, world_verts, 0, 2);
@@ -650,7 +650,7 @@ Dictionary SPINE_RUNTIME_CLASS::get_attachment(const String &p_slot_name, const 
 #ifdef SPINE_RUNTIME_3
 		dict["region"] = Rect2(info->getRegionOffsetX(), info->getRegionOffsetY(), info->getRegionWidth(), info->getRegionHeight());
 		dict["region_original_size"] = Size2(info->getRegionOriginalWidth(), info->getRegionOriginalHeight());
-#elifdef SPINE_RUNTIME_4_0
+#elif defined(SPINE_RUNTIME_4_0)
 		dict["region"] = Rect2(info->getRegionOffsetX(), info->getRegionOffsetY(), info->getRegionWidth(), info->getRegionHeight());
 		dict["region_original_size"] = Size2(info->getRegionOriginalWidth(), info->getRegionOriginalHeight());
 #else
