@@ -398,9 +398,13 @@ void Spine::set_resource(Ref<SpineResource> p_data) {
 	}
 	
 	runtime = res->create_runtime();
-	// TODO: connect signals
-	// runtime->connect("event", this, "emit_signal");
-	// runtime->connect("event", callable_mp(this, &Spine::emit_spine_signal));
+	
+	runtime->connect("animation_start", callable_mp(this, &Spine::_emit_animation_start));
+	runtime->connect("animation_complete", callable_mp(this, &Spine::_emit_animation_complete));
+	runtime->connect("animation_event", callable_mp(this, &Spine::_emit_animation_event));
+	runtime->connect("animation_end", callable_mp(this, &Spine::_emit_animation_end));
+	runtime->connect("predelete", callable_mp(this, &Spine::_emit_predelete));
+
 
 
 	// if (res.is_null())
@@ -427,9 +431,26 @@ void Spine::set_resource(Ref<SpineResource> p_data) {
 
 }
 
-// void Spine::emit_spine_signal(String str, String str2) {
-// 	emit_signal(str, str2);
-// }
+void Spine::_emit_animation_start(int track) {
+	emit_signal("animation_start", track);
+}
+
+void Spine::_emit_animation_complete(int track, int loop_count) {
+	emit_signal("animation_complete", track, loop_count);
+}
+
+void Spine::_emit_animation_event(int track, Dictionary event) {
+	emit_signal("animation_event", track, event);
+}
+
+void Spine::_emit_animation_end(int track) {
+	emit_signal("animation_end", track);
+}
+
+void Spine::_emit_predelete() {
+	emit_signal("predelete");
+}
+
 
 Ref<SpineResource> Spine::get_resource() {
 	return res;

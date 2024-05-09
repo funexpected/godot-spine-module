@@ -116,7 +116,11 @@ Ref<SpineResource> SpineRuntime::load_resource(const String &p_path) {
 }
 
 void SpineRuntime::_bind_methods() {
-    ADD_SIGNAL(MethodInfo("event"));
+    ADD_SIGNAL(MethodInfo("animation_start", PropertyInfo(Variant::INT, "track")));
+	ADD_SIGNAL(MethodInfo("animation_complete", PropertyInfo(Variant::INT, "track"), PropertyInfo(Variant::INT, "loop_count")));
+	ADD_SIGNAL(MethodInfo("animation_event", PropertyInfo(Variant::INT, "track"), PropertyInfo(Variant::DICTIONARY, "event")));
+	ADD_SIGNAL(MethodInfo("animation_end", PropertyInfo(Variant::INT, "track")));
+	ADD_SIGNAL(MethodInfo("predelete"));
 }
 
 Ref<SpineRuntime> SpineResource::create_runtime() {

@@ -108,10 +108,10 @@ static void spine_animation_callback(sp::AnimationState *state, sp::EventType ty
     SPINE_RUNTIME_CLASS* self = (SPINE_RUNTIME_CLASS*)state->getRendererObject();
     switch (type) {
 		case sp::EventType_Start:
-			self->emit_signal("event", "animation_start", entry->getTrackIndex());
+			self->emit_signal("animation_start", entry->getTrackIndex());
 			break;
 		case sp::EventType_Complete:
-			self->emit_signal("event", "animation_complete", entry->getTrackIndex(), 1);
+			self->emit_signal("animation_complete", entry->getTrackIndex(), 1);
 			break;
 		case sp::EventType_Event: {
 			Dictionary data;
@@ -119,10 +119,10 @@ static void spine_animation_callback(sp::AnimationState *state, sp::EventType ty
 			data["int"] = event->getIntValue();
 			data["float"] = event->getFloatValue();
 			data["string"] = event->getStringValue().buffer();
-			self->emit_signal("event", "animation_event", entry->getTrackIndex(), data);
+			self->emit_signal("animation_event", entry->getTrackIndex(), data);
 		} break;
 		case sp::EventType_End:
-			self->emit_signal("event", "animation_end", entry->getTrackIndex());
+			self->emit_signal("animation_end", entry->getTrackIndex());
 			break;
 	}
 }
