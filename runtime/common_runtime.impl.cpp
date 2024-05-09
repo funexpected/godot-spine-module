@@ -619,11 +619,11 @@ Dictionary SPINE_RUNTIME_CLASS::get_skeleton(bool individual_textures) const {
 	dict["slots"] = slots;
 
     
-    slots_vector = skeleton->getDrawOrder();
+    sp::Vector<sp::Slot*> draw_order_vector = skeleton->getDrawOrder();
  	if (individual_textures) {
 		Dictionary slot_dict;
-		for (int i = 0, n = slots_vector.size(); i < n; i++) {
-			sp::Slot *s = slots_vector[i];
+		for (int i = 0, n = draw_order_vector.size(); i < n; i++) {
+			sp::Slot *s = draw_order_vector[i];
 			slot_dict[s->getData().getName().buffer()] = s->getData().getIndex();
 		}
 		dict["item_indexes"] = slot_dict;
