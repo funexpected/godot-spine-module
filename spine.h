@@ -30,13 +30,24 @@
 #ifndef SPINE_H
 #define SPINE_H
 
+#include "core/object/class_db.h"
 #include "scene/2d/node_2d.h"
 #include "scene/resources/shape_2d.h"
 #include "spine_batcher.h"
 #include "runtime/spine_runtime.h"
-#include "core/array.h"
+#include "core/variant/array.h"
 
 class CollisionObject2D;
+
+
+class ResourceFormatLoaderSpine : public ResourceFormatLoader {
+public:
+	virtual Ref<Resource> load(const String &p_path, const String &p_original_path = "", Error *r_error = nullptr, bool p_use_sub_threads = false, float *r_progress = nullptr, CacheMode p_cache_mode = CACHE_MODE_REUSE);
+	virtual void get_recognized_extensions(List<String> *p_extensions) const;
+	virtual bool handles_type(const String &p_type) const;
+	virtual String get_resource_type(const String &p_path) const;
+};
+
 
 class Spine : public Node2D {
 
@@ -120,6 +131,12 @@ private:
 	// void _on_fx_draw();
 	// void _update_verties_count();
 	// String build_state_hash();
+
+	void _emit_animation_start(int p_track);
+	void _emit_animation_complete(int p_track, int p_loop_count);
+	void _emit_animation_event(int p_track, Dictionary p_event);
+	void _emit_animation_end(int p_track);
+	void _emit_predelete();
 
 protected:
 	static Array *invalid_names;

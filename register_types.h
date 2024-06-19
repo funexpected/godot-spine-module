@@ -27,5 +27,12 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  *****************************************************************************/
-void register_spine_types();
-void unregister_spine_types();
+
+#ifndef SPINE_REGISTER_TYPES_H
+#define SPINE_REGISTER_TYPES_H
+
+#include "modules/register_module_types.h"
+void initialize_spine_module(ModuleInitializationLevel p_level);
+void uninitialize_spine_module(ModuleInitializationLevel p_level);
+
+#endif // SPINE_REGISTER_TYPES_H

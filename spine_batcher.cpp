@@ -38,7 +38,7 @@ SpineBatcher::DrawCommand::DrawCommand() {
 	indies = memnew_arr(int, BATCH_CAPACITY * 3);
 	vertices_count = 0;
 	indies_count = 0;
-	mesh = VisualServer::get_singleton()->mesh_create();
+	mesh = RenderingServer::get_singleton()->mesh_create();
 };
 
 SpineBatcher::DrawCommand::~DrawCommand() {
@@ -46,7 +46,7 @@ SpineBatcher::DrawCommand::~DrawCommand() {
 	memdelete_arr(colors);
 	memdelete_arr(uvs);
 	memdelete_arr(indies);
-	VisualServer::get_singleton()->free(mesh);
+	RenderingServer::get_singleton()->free(mesh);
 }
 
 void SpineBatcher::DrawCommand::draw(RID ci) {
@@ -72,13 +72,13 @@ void SpineBatcher::DrawCommand::draw(RID ci) {
 	arrays[Mesh::ARRAY_INDEX] = p_indices;
 	arrays[Mesh::ARRAY_COLOR] = p_colors;
 	arrays[Mesh::ARRAY_TEX_UV] = p_uvs;
-	VisualServer::get_singleton()->mesh_add_surface_from_arrays(
+	RenderingServer::get_singleton()->mesh_add_surface_from_arrays(
 		mesh,
-		VisualServer::PRIMITIVE_TRIANGLES,
-		arrays, Array(),
-		VisualServer::ARRAY_FLAG_USE_2D_VERTICES
+		RenderingServer::PRIMITIVE_TRIANGLES,
+		arrays, Array(), Dictionary(),
+		RenderingServer::ARRAY_FLAG_USE_2D_VERTICES
 	);
-	VisualServer::get_singleton()->canvas_item_add_mesh(ci, mesh, Transform2D(), Color(1,1,1), texture->get_rid());
+	RenderingServer::get_singleton()->canvas_item_add_mesh(ci, mesh, Transform2D(), Color(1,1,1), texture->get_rid());
 }
 
 
