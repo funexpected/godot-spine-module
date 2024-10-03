@@ -127,13 +127,48 @@ public:
 		p_extensions->push_back("atlas");
 	}
 
+
+
 	virtual void get_dependencies(const String &p_path, List<String> *p_dependencies, bool p_add_types) {
-		print_line("get_dependencies for " + p_path);
-		// String base_dir = p_path.get_base_dir();
-		// String base_name = p_path.get_basename();
-		// String atlas_path = base_name + ".atlas";
-		// if (!FileAccess::exists(atlas_path)) return;
-		// p_dependencies->push_back(atlas_path);
+		print_verbose("get_dependencies for " + p_path);
+		String base_dir = p_path.get_base_dir();
+		String base_name = p_path.get_basename();
+		
+		String atlas_path = base_name + ".atlas";
+		if (!FileAccess::exists(atlas_path)) return;
+		p_dependencies->push_back(atlas_path);
+		print_verbose("Pushed dependency: " + atlas_path);
+
+		String image_path = base_name + ".png";
+		if (!FileAccess::exists(image_path)) return;
+		p_dependencies->push_back(image_path);
+		print_verbose("Pushed dependency: " + image_path);
+
+		int starting_number = 2;
+		String image_name_base = base_name;
+		// if base_name ends with a digit, it's the starting number
+		// otherwise it's 2
+		if (base_name.length() > 0) {  
+			const CharType *cstr = base_name.c_str();
+			CharType last_char = base_name[base_name.length() - 1];
+			if (last_char >= '0' && last_char <= '9')
+			{
+				starting_number = String::chr(last_char).to_int();
+				image_name_base = base_name.substr(0, base_name.length() - 1);
+			}
+		}
+
+		print_verbose("Starting number: " + itos(starting_number));
+		print_verbose("Image name base: " + image_name_base);
+
+		while (true) {
+			String image_path = image_name_base + itos(starting_number) + ".png";
+			if (!FileAccess::exists(image_path)) break;
+			p_dependencies->push_back(image_path);
+			print_verbose("Pushed dependency: " + image_path);
+			starting_number++;
+		}
+
 		// Vector<uint8_t> bytes = FileAccess::get_file_as_array(atlas_path);
 		// spAtlas *atlas = spAtlas_create((const char*)bytes.ptr(), bytes.size(), base_dir.utf8(), NULL);
 		// spAtlasPage *page = atlas->pages;
