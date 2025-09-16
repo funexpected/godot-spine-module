@@ -185,7 +185,7 @@ void unregister_spine_types() {
 
 	ResourceLoader::remove_resource_format_loader(resource_loader_spine);
 	resource_loader_spine.unref();
-
+	atlas_matcher_regex.unref();
 }
 
 #else
