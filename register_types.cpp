@@ -40,9 +40,15 @@
 #include "core/os/os.h"
 #include "core/io/resource_loader.h"
 #include "scene/resources/texture.h"
+#include "modules/regex/regex.h"
 
 typedef Ref<Texture> TextureRef;
 typedef Ref<ImageTexture> ImageTextureRef;
+
+
+static Ref<RegEx> atlas_matcher_regex;
+
+
 
 // void _spAtlasPage_createTexture(spAtlasPage* self, const char* path) {
 // 	TextureRef *ref = memnew(TextureRef);
@@ -127,21 +133,22 @@ public:
 		p_extensions->push_back("atlas");
 	}
 
+
+
 	virtual void get_dependencies(const String &p_path, List<String> *p_dependencies, bool p_add_types) {
-		print_line("get_dependencies for " + p_path);
-		// String base_dir = p_path.get_base_dir();
-		// String base_name = p_path.get_basename();
-		// String atlas_path = base_name + ".atlas";
-		// if (!FileAccess::exists(atlas_path)) return;
-		// p_dependencies->push_back(atlas_path);
-		// Vector<uint8_t> bytes = FileAccess::get_file_as_array(atlas_path);
-		// spAtlas *atlas = spAtlas_create((const char*)bytes.ptr(), bytes.size(), base_dir.utf8(), NULL);
-		// spAtlasPage *page = atlas->pages;
-		// while (page) {
-		// 	p_dependencies->push_back(base_dir + "/" + page->name);
-		// 	page = page->next;
-		// }
-		// spAtlas_dispose(atlas);
+		String base_dir = p_path.get_base_dir();
+		String base_name = p_path.get_basename();
+		
+		String atlas_path = base_name + ".atlas";
+		p_dependencies->push_back(atlas_path);
+		if (!FileAccess::exists(atlas_path)) return;
+
+		Array matches = atlas_matcher_regex->search_all(FileAccess::get_file_as_string(atlas_path));
+		for (int i = 0; i < matches.size(); i++) {
+			Ref<RegExMatch> match = matches[i];
+			String image_path = base_dir + "/" + match->get_string(2);
+			p_dependencies->push_back(image_path);
+		}
 	}
 
 	virtual bool handles_type(const String& p_type) const {
@@ -169,6 +176,8 @@ void register_spine_types() {
 	ClassDB::register_class<SpineMachine>();
 	ClassDB::register_class<AnimationNodeSpineAnimation>();
 	resource_loader_spine.instance();
+	atlas_matcher_regex.instance();
+	atlas_matcher_regex->compile("(^\\n|\\n\\n)([a-zA-Z0-9\\.-_]+)\\n");
 	ResourceLoader::add_resource_format_loader(resource_loader_spine);
 }
 
